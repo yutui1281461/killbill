@@ -42,7 +42,7 @@ public class MockTagDao extends MockEntityDaoBase<TagModelDao, Tag, TagApiExcept
     private final Map<UUID, List<TagModelDao>> tagStore = new HashMap<UUID, List<TagModelDao>>();
 
     @Override
-    public void create(final TagModelDao tag, final InternalCallContext context) throws TagApiException {
+    public void create(final TagModelDao tag, boolean sendEvent, final boolean ignoreDuplicate, final InternalCallContext context) throws TagApiException {
         if (tagStore.get(tag.getObjectId()) == null) {
             tagStore.put(tag.getObjectId(), new ArrayList<TagModelDao>());
         }
@@ -57,7 +57,7 @@ public class MockTagDao extends MockEntityDaoBase<TagModelDao, Tag, TagApiExcept
 
     @Override
     public void deleteTag(final UUID objectId, final ObjectType objectType,
-                          final UUID tagDefinitionId, final InternalCallContext context) {
+                          final UUID tagDefinitionId, boolean sendEvent, final InternalCallContext context) {
         final List<TagModelDao> tags = tagStore.get(objectId);
         if (tags != null) {
             final Iterator<TagModelDao> tagIterator = tags.iterator();

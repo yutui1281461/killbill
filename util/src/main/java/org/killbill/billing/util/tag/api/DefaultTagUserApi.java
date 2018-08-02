@@ -152,7 +152,7 @@ public class DefaultTagUserApi implements TagUserApi {
 
     @Override
     public void removeTag(final UUID objectId, final ObjectType objectType, final UUID tagDefinitionId, final CallContext context) throws TagApiException {
-        tagDao.deleteTag(objectId, objectType, tagDefinitionId, internalCallContextFactory.createInternalCallContext(objectId, objectType, context));
+        tagDao.deleteTag(objectId, objectType, tagDefinitionId, true, internalCallContextFactory.createInternalCallContext(objectId, objectType, context));
     }
 
     @Override
@@ -183,7 +183,7 @@ public class DefaultTagUserApi implements TagUserApi {
     public void removeTags(final UUID objectId, final ObjectType objectType, final Collection<UUID> tagDefinitionIds, final CallContext context) throws TagApiException {
         // TODO: consider making this batch
         for (final UUID tagDefinitionId : tagDefinitionIds) {
-            tagDao.deleteTag(objectId, objectType, tagDefinitionId, internalCallContextFactory.createInternalCallContext(objectId, objectType, context));
+            tagDao.deleteTag(objectId, objectType, tagDefinitionId, true, internalCallContextFactory.createInternalCallContext(objectId, objectType, context));
         }
     }
 

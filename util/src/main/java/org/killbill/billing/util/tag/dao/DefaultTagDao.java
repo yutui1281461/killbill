@@ -205,13 +205,30 @@ public class DefaultTagDao extends EntityDaoBase<TagModelDao, Tag, TagApiExcepti
     }
 
     @Override
-    public void deleteTag(final UUID objectId, final ObjectType objectType, final UUID tagDefinitionId, final InternalCallContext context) throws TagApiException {
+    public void create(final TagModelDao entity, final boolean sendEvent, final boolean ignoreDuplicate, final InternalCallContext context) throws TagApiException {
+        if (ignoreDuplicate) {
+            if (sendEvent) {
+                transactionalSqlDao.execute(false, TagApiException.class, getCreateEntitySqlDaoTransactionWrapperNoDuplicateCheck(entity, context));
+            } else {
+                transactionalSqlDao.execute(false, TagApiException.class, getCreateEntitySqlDaoTransactionWrapperNoEventNoDuplicateCheck(entity, context));
+            }
+        } else {
+            if (sendEvent) {
+                create(entity, context);
+            } else {
+                transactionalSqlDao.execute(false, TagApiException.class, getCreateEntitySqlDaoTransactionWrapperNoEvent(entity, context));
+            }
+        }
+    }
+
+
+    @Override
+    public void deleteTag(final UUID objectId, final ObjectType objectType, final UUID tagDefinitionId, final boolean sendEvent, final InternalCallContext context) throws TagApiException {
 
         transactionalSqlDao.execute(false, TagApiException.class, new EntitySqlDaoTransactionWrapper<Void>() {
 
             @Override
             public Void inTransaction(final EntitySqlDaoWrapperFactory entitySqlDaoWrapperFactory) throws Exception {
-
                 final TagDefinitionModelDao tagDefinition = getTagDefinitionFromTransaction(tagDefinitionId, entitySqlDaoWrapperFactory, context);
                 final TagSqlDao transactional = entitySqlDaoWrapperFactory.become(TagSqlDao.class);
                 final List<TagModelDao> tags = transactional.getTagsForObject(objectId, objectType, context);
@@ -228,12 +245,15 @@ public class DefaultTagDao extends EntityDaoBase<TagModelDao, Tag, TagApiExcepti
                 // Delete the tag
                 transactional.markTagAsDeleted(tag.getId().toString(), context);
 
-                postBusEventFromTransaction(tag, tag, ChangeType.DELETE, entitySqlDaoWrapperFactory, context);
+                if (sendEvent) {
+                    postBusEventFromTransaction(tag, tag, ChangeType.DELETE, entitySqlDaoWrapperFactory, context);
+
+                }
                 return null;
             }
         });
-
     }
+
 
     @Override
     public Pagination<TagModelDao> searchTags(final String searchKey, final Long offset, final Long limit, final InternalTenantContext context) {

@@ -45,7 +45,8 @@ public interface TagInternalApi {
 
     public List<Tag> getTagsForAccount(boolean includedDeleted, InternalTenantContext context);
 
-    public void addTag(final UUID objectId, final ObjectType objectType, UUID tagDefinitionId, InternalCallContext context) throws TagApiException;
+    public void addTag(final UUID objectId, final ObjectType objectType, UUID tagDefinitionId, final boolean sendEvent, final boolean ignoreDuplicate, InternalCallContext context) throws TagApiException;
 
-    public void removeTag(final UUID objectId, final ObjectType objectType, final UUID tagDefinitionId, InternalCallContext context) throws TagApiException;
+    public void removeTag(final UUID objectId, final ObjectType objectType, final UUID tagDefinitionId, final boolean sendEvent, InternalCallContext context) throws TagApiException;
+
 }

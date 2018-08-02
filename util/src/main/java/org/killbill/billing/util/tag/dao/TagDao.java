@@ -31,7 +31,9 @@ import org.killbill.billing.util.tag.Tag;
 
 public interface TagDao extends EntityDao<TagModelDao, Tag, TagApiException> {
 
-    void deleteTag(UUID objectId, ObjectType objectType, UUID tagDefinition, InternalCallContext context) throws TagApiException;
+    void create(TagModelDao entity, boolean sendEvent, final boolean ignoreDuplicate, InternalCallContext context) throws TagApiException;
+
+    void deleteTag(UUID objectId, ObjectType objectType, UUID tagDefinition, boolean sendEvent, InternalCallContext context) throws TagApiException;
 
     Pagination<TagModelDao> searchTags(String searchKey, Long offset, Long limit, InternalTenantContext context);
 

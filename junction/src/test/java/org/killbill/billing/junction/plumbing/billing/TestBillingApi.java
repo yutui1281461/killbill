@@ -217,7 +217,7 @@ public class TestBillingApi extends JunctionTestSuiteNoDB {
 
         final Account account = createAccount(32);
 
-        tagInternalApi.addTag(account.getId(), ObjectType.ACCOUNT, ControlTagType.AUTO_INVOICING_OFF.getId(), internalCallContext);
+        tagInternalApi.addTag(account.getId(), ObjectType.ACCOUNT, ControlTagType.AUTO_INVOICING_OFF.getId(), true, false, internalCallContext);
 
         final BillingEventSet events = billingInternalApi.getBillingEventsForAccountAndUpdateAccountBCD(account.getId(), null, internalCallContext);
 
@@ -233,7 +233,7 @@ public class TestBillingApi extends JunctionTestSuiteNoDB {
 
         final Account account = createAccount(32);
 
-        tagInternalApi.addTag(bunId, ObjectType.BUNDLE, ControlTagType.AUTO_INVOICING_OFF.getId(), internalCallContext);
+        tagInternalApi.addTag(bunId, ObjectType.BUNDLE, ControlTagType.AUTO_INVOICING_OFF.getId(), true, false, internalCallContext);
 
         final BillingEventSet events = billingInternalApi.getBillingEventsForAccountAndUpdateAccountBCD(account.getId(), null, internalCallContext);
 

@@ -82,7 +82,7 @@ public class TestDefaultAuditDao extends UtilTestSuiteWithEmbeddedDB {
         Assert.assertEquals(firstAuditLogs.get(0).getChangeType(), ChangeType.INSERT);
 
         eventsListener.pushExpectedEvent(NextEvent.TAG);
-        tagDao.deleteTag(tag.getObjectId(), tag.getObjectType(), tag.getTagDefinitionId(), internalCallContext);
+        tagDao.deleteTag(tag.getObjectId(), tag.getObjectType(), tag.getTagDefinitionId(), true, internalCallContext);
         assertListenerStatus();
 
         final List<AuditLog> secondAuditLogs = auditDao.getAuditLogsForId(TableName.TAG, tag.getId(), AuditLevel.FULL, internalCallContext);

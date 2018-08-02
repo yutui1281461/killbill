@@ -19,9 +19,11 @@
 package org.killbill.billing.beatrix.integration.overdue;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
+import org.killbill.billing.ObjectType;
 import org.killbill.billing.api.FlakyRetryAnalyzer;
 import org.killbill.billing.api.TestApiListener.NextEvent;
 import org.killbill.billing.beatrix.util.InvoiceChecker.ExpectedInvoiceItemCheck;
@@ -33,8 +35,11 @@ import org.killbill.billing.entitlement.api.SubscriptionBundle;
 import org.killbill.billing.invoice.api.InvoiceItemType;
 import org.killbill.billing.overdue.wrapper.OverdueWrapper;
 import org.killbill.billing.subscription.api.SubscriptionBase;
+import org.killbill.billing.util.tag.ControlTagType;
+import org.killbill.billing.util.tag.Tag;
 import org.testng.annotations.Test;
 
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 @Test(groups = "slow")
@@ -89,14 +94,12 @@ public class TestOverdueWithSubscriptionCancellation extends TestOverdueBase {
         cancelEntitlementAndCheckForCompletion(addOn1, NextEvent.BLOCK, NextEvent.CANCEL, NextEvent.NULL_INVOICE);
 
         // DAY 30 have to get out of trial before first payment
-        addDaysAndCheckForCompletion(29, NextEvent.PHASE,  NextEvent.PHASE, NextEvent.NULL_INVOICE, NextEvent.INVOICE, NextEvent.PAYMENT_ERROR, NextEvent.INVOICE_PAYMENT_ERROR);
+        addDaysAndCheckForCompletion(29, NextEvent.PHASE, NextEvent.PHASE, NextEvent.NULL_INVOICE, NextEvent.INVOICE, NextEvent.PAYMENT_ERROR, NextEvent.INVOICE_PAYMENT_ERROR);
 
         invoiceChecker.checkChargedThroughDate(baseEntitlement.getId(), new LocalDate(2012, 6, 30), callContext);
 
-
         // Should still be in clear state
         checkODState(OverdueWrapper.CLEAR_STATE_NAME);
-
 
         // DAY 36 -- RIGHT AFTER OD1 (two block events, for the cancellation and the OD1 state)
         // One BLOCK event is for the overdue state transition
@@ -109,7 +112,7 @@ public class TestOverdueWithSubscriptionCancellation extends TestOverdueBase {
         final SubscriptionBase cancelledBaseSubscription = ((DefaultEntitlement) entitlementApi.getEntitlementForId(baseEntitlement.getId(), callContext)).getSubscriptionBase();
         assertTrue(cancelledBaseSubscription.getState() == EntitlementState.CANCELLED);
 
-        final SubscriptionBase cancelledAddon1= ((DefaultEntitlement) entitlementApi.getEntitlementForId(addOn1.getId(), callContext)).getSubscriptionBase();
+        final SubscriptionBase cancelledAddon1 = ((DefaultEntitlement) entitlementApi.getEntitlementForId(addOn1.getId(), callContext)).getSubscriptionBase();
         assertTrue(cancelledAddon1.getState() == EntitlementState.CANCELLED);
     }
 
@@ -144,7 +147,7 @@ public class TestOverdueWithSubscriptionCancellation extends TestOverdueBase {
         assertTrue(cancelledBaseSubscription2.getState() == EntitlementState.CANCELLED);
 
         // DAY 30 have to get out of trial before first payment (2012-05-31)
-        addDaysAndCheckForCompletion(29, NextEvent.PHASE,  NextEvent.PHASE, NextEvent.NULL_INVOICE, NextEvent.INVOICE, NextEvent.PAYMENT_ERROR, NextEvent.INVOICE_PAYMENT_ERROR);
+        addDaysAndCheckForCompletion(29, NextEvent.PHASE, NextEvent.PHASE, NextEvent.NULL_INVOICE, NextEvent.INVOICE, NextEvent.PAYMENT_ERROR, NextEvent.INVOICE_PAYMENT_ERROR);
         invoiceChecker.checkInvoice(account.getId(),
                                     4,
                                     callContext,
@@ -168,5 +171,40 @@ public class TestOverdueWithSubscriptionCancellation extends TestOverdueBase {
 
         final SubscriptionBase cancelledBaseEntitlement3 = ((DefaultEntitlement) entitlementApi.getEntitlementForId(baseEntitlement3.getId(), callContext)).getSubscriptionBase();
         assertTrue(cancelledBaseEntitlement3.getState() == EntitlementState.CANCELLED);
+    }
+
+    @Test(groups = "slow", description = "Test overdue state doesn't change AUTO_INVOICE_OFF tag")
+    public void testOverdueStateWithExistingAUTO_INVOICE_OFFTag() throws Exception {
+        clock.setTime(new DateTime(2012, 5, 1, 0, 3, 42, 0));
+
+        setupAccount();
+
+        // Set next invoice to fail and create subscription
+        paymentPlugin.makeAllInvoicesFailWithError(true);
+        createBaseEntitlementAndCheckForCompletion(account.getId(), "externalKey", productName, ProductCategory.BASE, term, NextEvent.CREATE, NextEvent.BLOCK, NextEvent.INVOICE);
+
+        // DAY 30 have to get out of trial before first payment
+        addDaysAndCheckForCompletion(30, NextEvent.PHASE, NextEvent.INVOICE, NextEvent.PAYMENT_ERROR, NextEvent.INVOICE_PAYMENT_ERROR);
+
+        // Should still be in clear state
+        checkODState(OverdueWrapper.CLEAR_STATE_NAME);
+
+        busHandler.pushExpectedEvents(NextEvent.TAG);
+        tagUserApi.addTag(account.getId(), ObjectType.ACCOUNT, ControlTagType.AUTO_INVOICING_OFF.getId(), callContext);
+        busHandler.assertListenerStatus();
+
+        final List<Tag> tagsForAccount1 = tagUserApi.getTagsForAccount(account.getId(), false, callContext);
+        assertEquals(tagsForAccount1.size(), 1);
+        assertEquals(tagsForAccount1.get(0).getTagDefinitionId(), ControlTagType.AUTO_INVOICING_OFF.getId());
+
+        // DAY 36 -- RIGHT AFTER OD1
+        addDaysAndCheckForCompletion(6, NextEvent.BLOCK, NextEvent.BLOCK, NextEvent.CANCEL);
+
+        // Should be in OD1
+        checkODState("OD1");
+
+        final List<Tag> tagsForAccount2 = tagUserApi.getTagsForAccount(account.getId(), false, callContext);
+        assertEquals(tagsForAccount2.size(), 1);
+        assertEquals(tagsForAccount2.get(0).getTagDefinitionId(), ControlTagType.AUTO_INVOICING_OFF.getId());
     }
 }

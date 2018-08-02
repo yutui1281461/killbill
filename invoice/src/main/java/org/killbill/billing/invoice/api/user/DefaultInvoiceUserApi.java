@@ -270,7 +270,7 @@ public class DefaultInvoiceUserApi implements InvoiceUserApi {
     public void tagInvoiceAsWrittenOff(final UUID invoiceId, final CallContext context) throws TagApiException, InvoiceApiException {
         // Note: the tagApi is audited
         final InternalCallContext internalContext = internalCallContextFactory.createInternalCallContext(invoiceId, ObjectType.INVOICE, context);
-        tagApi.addTag(invoiceId, ObjectType.INVOICE, ControlTagType.WRITTEN_OFF.getId(), internalContext);
+        tagApi.addTag(invoiceId, ObjectType.INVOICE, ControlTagType.WRITTEN_OFF.getId(), true, false, internalContext);
 
         // Retrieve the invoice for the account id
         final Invoice invoice = new DefaultInvoice(dao.getById(invoiceId, internalContext));
@@ -282,7 +282,7 @@ public class DefaultInvoiceUserApi implements InvoiceUserApi {
     public void tagInvoiceAsNotWrittenOff(final UUID invoiceId, final CallContext context) throws TagApiException, InvoiceApiException {
         // Note: the tagApi is audited
         final InternalCallContext internalContext = internalCallContextFactory.createInternalCallContext(invoiceId, ObjectType.INVOICE, context);
-        tagApi.removeTag(invoiceId, ObjectType.INVOICE, ControlTagType.WRITTEN_OFF.getId(), internalContext);
+        tagApi.removeTag(invoiceId, ObjectType.INVOICE, ControlTagType.WRITTEN_OFF.getId(), true, internalContext);
 
         // Retrieve the invoice for the account id
         final Invoice invoice = new DefaultInvoice(dao.getById(invoiceId, internalContext));

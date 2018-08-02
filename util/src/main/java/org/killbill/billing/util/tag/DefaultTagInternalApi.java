@@ -76,12 +76,12 @@ public class DefaultTagInternalApi implements TagInternalApi {
         return toTagList(tagDao.getTagsForAccountType(objectType, includedDeleted, internalTenantContext));
     }
 
+
     @Override
-    public void addTag(final UUID objectId, final ObjectType objectType, final UUID tagDefinitionId, final InternalCallContext context)
-            throws TagApiException {
+    public void addTag(final UUID objectId, final ObjectType objectType, final UUID tagDefinitionId, final boolean sendEvent, final boolean ignoreDuplicate, final InternalCallContext context) throws TagApiException {
         final TagModelDao tag = new TagModelDao(context.getCreatedDate(), tagDefinitionId, objectId, objectType);
         try {
-            tagDao.create(tag, context);
+            tagDao.create(tag, sendEvent, ignoreDuplicate, context);
         } catch (TagApiException e) {
             // Be lenient here and make the addTag method idempotent
             if (ErrorCode.TAG_ALREADY_EXISTS.getCode() != e.getCode()) {
@@ -90,10 +90,10 @@ public class DefaultTagInternalApi implements TagInternalApi {
         }
     }
 
+
     @Override
-    public void removeTag(final UUID objectId, final ObjectType objectType, final UUID tagDefinitionId, final InternalCallContext context)
-            throws TagApiException {
-        tagDao.deleteTag(objectId, objectType, tagDefinitionId, context);
+    public void removeTag(final UUID objectId, final ObjectType objectType, final UUID tagDefinitionId, final boolean sendEvent, final InternalCallContext context) throws TagApiException {
+        tagDao.deleteTag(objectId, objectType, tagDefinitionId, sendEvent, context);
     }
 
     private List<Tag> toTagList(final List<TagModelDao> input) {

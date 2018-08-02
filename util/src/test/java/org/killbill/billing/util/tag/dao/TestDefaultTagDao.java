@@ -146,7 +146,7 @@ public class TestDefaultTagDao extends UtilTestSuiteWithEmbeddedDB {
 
         // Delete the tag
         eventsListener.pushExpectedEvent(NextEvent.TAG);
-        tagDao.deleteTag(objectId, objectType, createdTagDefinition.getId(), internalCallContext);
+        tagDao.deleteTag(objectId, objectType, createdTagDefinition.getId(), true, internalCallContext);
         assertListenerStatus();
 
         // Make sure the tag is deleted
@@ -157,7 +157,7 @@ public class TestDefaultTagDao extends UtilTestSuiteWithEmbeddedDB {
 
         // Delete tag again, check correct error
         try {
-            tagDao.deleteTag(objectId, objectType, createdTagDefinition.getId(), internalCallContext);
+            tagDao.deleteTag(objectId, objectType, createdTagDefinition.getId(), true, internalCallContext);
             Assert.fail("Deleting same tag again should fail");
         } catch (final TagApiException e) {
             Assert.assertEquals(e.getCode(), ErrorCode.TAG_DOES_NOT_EXIST.getCode());

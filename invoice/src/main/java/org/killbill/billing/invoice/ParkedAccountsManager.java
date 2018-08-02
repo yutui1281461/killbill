@@ -45,7 +45,7 @@ public class ParkedAccountsManager {
     // Idempotent
     public void parkAccount(final UUID accountId, final InternalCallContext internalCallContext) throws TagApiException {
         try {
-            tagApi.addTag(accountId, ObjectType.ACCOUNT, PARK_TAG_DEFINITION_ID, internalCallContext);
+            tagApi.addTag(accountId, ObjectType.ACCOUNT, PARK_TAG_DEFINITION_ID, true, false, internalCallContext);
         } catch (final TagApiException e) {
             if (ErrorCode.TAG_ALREADY_EXISTS.getCode() != e.getCode()) {
                 throw e;
@@ -54,7 +54,7 @@ public class ParkedAccountsManager {
     }
 
     public void unparkAccount(final UUID accountId, final InternalCallContext internalCallContext) throws TagApiException {
-        tagApi.removeTag(accountId, ObjectType.ACCOUNT, PARK_TAG_DEFINITION_ID, internalCallContext);
+        tagApi.removeTag(accountId, ObjectType.ACCOUNT, PARK_TAG_DEFINITION_ID, true, internalCallContext);
     }
 
     public boolean isParked(final InternalCallContext internalCallContext) throws TagApiException {

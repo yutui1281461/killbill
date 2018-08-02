@@ -138,7 +138,7 @@ public class TestTagStore extends UtilTestSuiteWithEmbeddedDB {
         assertListenerStatus();
 
         eventsListener.pushExpectedEvent(NextEvent.TAG);
-        tagDao.deleteTag(objectId, ObjectType.ACCOUNT, tagDefinition.getId(), internalCallContext);
+        tagDao.deleteTag(objectId, ObjectType.ACCOUNT, tagDefinition.getId(), true, internalCallContext);
         assertListenerStatus();
 
         eventsListener.pushExpectedEvent(NextEvent.TAG_DEFINITION);
