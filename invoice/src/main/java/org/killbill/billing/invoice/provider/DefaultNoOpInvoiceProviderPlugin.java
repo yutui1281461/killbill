@@ -1,8 +1,7 @@
 /*
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014 Groupon, Inc
  *
- * The Billing Project licenses this file to you under the Apache License, version 2.0
+ * Groupon licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
  * License.  You may obtain a copy of the License at:
  *
@@ -21,40 +20,25 @@ import java.util.List;
 
 import org.killbill.billing.invoice.api.Invoice;
 import org.killbill.billing.invoice.api.InvoiceItem;
-import org.killbill.billing.invoice.plugin.api.InvoiceContext;
 import org.killbill.billing.invoice.plugin.api.NoOpInvoicePluginApi;
-import org.killbill.billing.invoice.plugin.api.OnFailureInvoiceResult;
-import org.killbill.billing.invoice.plugin.api.OnSuccessInvoiceResult;
-import org.killbill.billing.invoice.plugin.api.PriorInvoiceResult;
 import org.killbill.billing.payment.api.PluginProperty;
 import org.killbill.billing.util.callcontext.CallContext;
+import org.killbill.clock.Clock;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 
 public class DefaultNoOpInvoiceProviderPlugin implements NoOpInvoicePluginApi {
 
+    private final Clock clock;
+
     @Inject
-    public DefaultNoOpInvoiceProviderPlugin() {
+    public DefaultNoOpInvoiceProviderPlugin(final Clock clock) {
+        this.clock = clock;
     }
 
     @Override
-    public PriorInvoiceResult priorCall(final InvoiceContext invoiceContext, final Iterable<PluginProperty> properties) {
-        return null;
-    }
-
-    @Override
-    public List<InvoiceItem> getAdditionalInvoiceItems(final Invoice invoice, final boolean isDryRun, final Iterable<PluginProperty> properties, final CallContext context) {
+    public List<InvoiceItem> getAdditionalInvoiceItems(final Invoice invoice, final boolean isDryRun, final Iterable<PluginProperty> properties, CallContext context) {
         return ImmutableList.<InvoiceItem>of();
-    }
-
-    @Override
-    public OnSuccessInvoiceResult onSuccessCall(final InvoiceContext invoiceContext, final Iterable<PluginProperty> properties) {
-        return null;
-    }
-
-    @Override
-    public OnFailureInvoiceResult onFailureCall(final InvoiceContext invoiceContext, final Iterable<PluginProperty> properties) {
-        return null;
     }
 }

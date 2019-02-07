@@ -16,10 +16,6 @@
 
 package org.killbill.billing.callcontext;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
@@ -28,28 +24,26 @@ import org.killbill.billing.util.callcontext.CallContext;
 import org.killbill.billing.util.callcontext.CallOrigin;
 import org.killbill.billing.util.callcontext.UserType;
 
-public abstract class CallContextBase implements CallContext, Externalizable {
+public abstract class CallContextBase implements CallContext {
 
-    protected UUID accountId;
-    protected UUID tenantId;
-    protected UUID userToken;
-    protected String userName;
-    protected CallOrigin callOrigin;
-    protected UserType userType;
-    protected String reasonCode;
-    protected String comments;
+    protected final UUID tenantId;
+    protected final UUID userToken;
+    protected final String userName;
+    protected final CallOrigin callOrigin;
+    protected final UserType userType;
+    protected final String reasonCode;
+    protected final String comments;
 
-    // For deserialization
-    public CallContextBase() {
+    public CallContextBase(@Nullable final UUID tenantId, final String userName, final CallOrigin callOrigin, final UserType userType) {
+        this(tenantId, userName, callOrigin, userType, null);
     }
 
-    public CallContextBase(@Nullable final UUID accountId, @Nullable final UUID tenantId, final String userName, final CallOrigin callOrigin, final UserType userType, final UUID userToken) {
-        this(accountId, tenantId, userName, callOrigin, userType, null, null, userToken);
+    public CallContextBase(@Nullable final UUID tenantId, final String userName, final CallOrigin callOrigin, final UserType userType, final UUID userToken) {
+        this(tenantId, userName, callOrigin, userType, null, null, userToken);
     }
 
-    public CallContextBase(@Nullable final UUID accountId, @Nullable final UUID tenantId, final String userName, final CallOrigin callOrigin, final UserType userType,
+    public CallContextBase(@Nullable final UUID tenantId, final String userName, final CallOrigin callOrigin, final UserType userType,
                            final String reasonCode, final String comment, final UUID userToken) {
-        this.accountId = accountId;
         this.tenantId = tenantId;
         this.userName = userName;
         this.callOrigin = callOrigin;
@@ -57,11 +51,6 @@ public abstract class CallContextBase implements CallContext, Externalizable {
         this.reasonCode = reasonCode;
         this.comments = comment;
         this.userToken = userToken;
-    }
-
-    @Override
-    public UUID getAccountId() {
-        return accountId;
     }
 
     @Override
@@ -97,38 +86,5 @@ public abstract class CallContextBase implements CallContext, Externalizable {
     @Override
     public UUID getUserToken() {
         return userToken;
-    }
-
-    @Override
-    public void writeExternal(final ObjectOutput out) throws IOException {
-        out.writeLong(accountId == null ? 0 : accountId.getMostSignificantBits());
-        out.writeLong(accountId == null ? 0 : accountId.getLeastSignificantBits());
-        out.writeLong(tenantId == null ? 0 : tenantId.getMostSignificantBits());
-        out.writeLong(tenantId == null ? 0 : tenantId.getLeastSignificantBits());
-        out.writeLong(userToken.getMostSignificantBits());
-        out.writeLong(userToken.getLeastSignificantBits());
-        out.writeUTF(userName);
-        out.writeUTF(callOrigin.name());
-        out.writeUTF(userType.name());
-        out.writeUTF(reasonCode);
-        out.writeUTF(comments);
-    }
-
-    @Override
-    public void readExternal(final ObjectInput in) throws IOException, ClassNotFoundException {
-        this.accountId = new UUID(in.readLong(), in.readLong());
-        if (this.accountId.getMostSignificantBits() == 0) {
-            this.accountId = null;
-        }
-        this.tenantId = new UUID(in.readLong(), in.readLong());
-        if (this.tenantId.getMostSignificantBits() == 0) {
-            this.tenantId = null;
-        }
-        this.userToken = new UUID(in.readLong(), in.readLong());
-        this.userName = in.readUTF();
-        this.callOrigin = CallOrigin.valueOf(in.readUTF());
-        this.userType = UserType.valueOf(in.readUTF());
-        this.reasonCode = in.readUTF();
-        this.comments = in.readUTF();
     }
 }

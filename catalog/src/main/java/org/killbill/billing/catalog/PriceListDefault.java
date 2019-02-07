@@ -16,6 +16,8 @@
 
 package org.killbill.billing.catalog;
 
+import java.net.URI;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 
@@ -38,15 +40,15 @@ public class PriceListDefault extends DefaultPriceList {
         super.validate(catalog, errors);
         if (!getName().equals(PriceListSet.DEFAULT_PRICELIST_NAME)) {
             errors.add(new ValidationError("The name of the default pricelist must be 'DEFAULT'",
-                                           DefaultPriceList.class, getName()));
+                                           catalog.getCatalogURI(), DefaultPriceList.class, getName()));
 
         }
         return errors;
     }
 
     @Override
-    public void initialize(final StandaloneCatalog catalog) {
-        super.initialize(catalog);
+    public void initialize(final StandaloneCatalog catalog, final URI sourceURI) {
+        super.initialize(catalog, sourceURI);
         CatalogSafetyInitializer.initializeNonRequiredNullFieldsWithDefaultValue(this);
     }
 
@@ -54,5 +56,6 @@ public class PriceListDefault extends DefaultPriceList {
     public String getName() {
         return PriceListSet.DEFAULT_PRICELIST_NAME;
     }
+
 
 }

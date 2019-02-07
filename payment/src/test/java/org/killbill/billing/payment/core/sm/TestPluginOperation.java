@@ -1,6 +1,6 @@
 /*
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2016 Groupon, Inc
+ * Copyright 2014-2016 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -18,8 +18,6 @@
 package org.killbill.billing.payment.core.sm;
 
 import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Semaphore;
@@ -29,7 +27,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.Nullable;
 
-import org.awaitility.Awaitility;
 import org.killbill.automaton.OperationException;
 import org.killbill.automaton.OperationResult;
 import org.killbill.billing.ErrorCode;
@@ -56,6 +53,8 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.awaitility.Awaitility;
 
 public class TestPluginOperation extends PaymentTestSuiteNoDB {
 
@@ -67,19 +66,16 @@ public class TestPluginOperation extends PaymentTestSuiteNoDB {
     private final Account account = Mockito.mock(Account.class);
 
     @Override
-    protected KillbillConfigSource getConfigSource(final Map<String, String> extraProperties) {
-        final Map<String, String> allExtraProperties = new HashMap<String, String>(extraProperties);
-        allExtraProperties.put("org.killbill.payment.provider.default", MockPaymentProviderPlugin.PLUGIN_NAME);
-        allExtraProperties.put("killbill.payment.engine.events.off", "false");
-        allExtraProperties.put("org.killbill.payment.globalLock.retries", "1");
-        return getConfigSource("/payment.properties", allExtraProperties);
+    protected KillbillConfigSource getConfigSource() {
+        return getConfigSource("/payment.properties",
+                               ImmutableMap.<String, String>of("org.killbill.payment.provider.default", MockPaymentProviderPlugin.PLUGIN_NAME,
+                                                               "killbill.payment.engine.events.off", "false",
+                                                               "org.killbill.payment.globalLock.retries", "1"));
+
     }
 
     @BeforeMethod(groups = "fast")
     public void beforeMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
         super.beforeMethod();
         Mockito.when(account.getId()).thenReturn(UUID.randomUUID());
     }
@@ -221,7 +217,6 @@ public class TestPluginOperation extends PaymentTestSuiteNoDB {
                                                                                 UUID.randomUUID(),
                                                                                 new BigDecimal("192.3920111"),
                                                                                 Currency.BRL,
-                                                                                null,
                                                                                 null,
                                                                                 null,
                                                                                 shouldLockAccount,

@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2017 Groupon, Inc
+ * Copyright 2014-2017 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -22,6 +22,7 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.net.URI;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -29,6 +30,9 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.killbill.billing.overdue.api.OverdueConfig;
+import org.killbill.billing.util.cache.ExternalizableInput;
+import org.killbill.billing.util.cache.ExternalizableOutput;
+import org.killbill.billing.util.cache.MapperHolder;
 import org.killbill.xmlloader.ValidatingConfig;
 import org.killbill.xmlloader.ValidationErrors;
 
@@ -59,32 +63,17 @@ public class DefaultOverdueConfig extends ValidatingConfig<DefaultOverdueConfig>
         return this;
     }
 
-    @Override
-    public boolean equals(final Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        final DefaultOverdueConfig that = (DefaultOverdueConfig) o;
-
-        return accountOverdueStates != null ? accountOverdueStates.equals(that.accountOverdueStates) : that.accountOverdueStates == null;
+    public URI getURI() {
+        return null;
     }
 
     @Override
-    public int hashCode() {
-        return accountOverdueStates != null ? accountOverdueStates.hashCode() : 0;
-    }
-
-    @Override
-    public void readExternal(final ObjectInput in) throws IOException, ClassNotFoundException {
-        this.accountOverdueStates = (DefaultOverdueStatesAccount) in.readObject();
+    public void readExternal(final ObjectInput in) throws IOException {
+        MapperHolder.mapper().readerForUpdating(this).readValue(new ExternalizableInput(in));
     }
 
     @Override
     public void writeExternal(final ObjectOutput oo) throws IOException {
-        oo.writeObject(accountOverdueStates);
+        MapperHolder.mapper().writeValue(new ExternalizableOutput(oo), this);
     }
 }

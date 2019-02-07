@@ -35,10 +35,6 @@ public class TestInvoicePaymentControlDao extends PaymentTestSuiteWithEmbeddedDB
 
     @BeforeClass(groups = "slow")
     protected void beforeClass() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         super.beforeClass();
         dao = new InvoicePaymentControlDao(dbi);
     }
@@ -65,7 +61,7 @@ public class TestInvoicePaymentControlDao extends PaymentTestSuiteWithEmbeddedDB
         assertEquals(entries.get(0).getAmount().compareTo(amount), 0);
         assertEquals(entries.get(0).getCurrency(), Currency.USD);
         assertEquals(entries.get(0).getCreatedBy(), "lulu");
-        assertEquals(entries.get(0).getCreatedDate().compareTo(utcNow), 0);
+        assertEquals(entries.get(0).getCreatedDate(), utcNow);
     }
 
     @Test(groups = "slow")

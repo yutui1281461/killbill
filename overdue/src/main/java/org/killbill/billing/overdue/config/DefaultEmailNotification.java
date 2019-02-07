@@ -22,9 +22,8 @@ import javax.xml.bind.annotation.XmlElement;
 
 import org.killbill.billing.overdue.api.EmailNotification;
 
-@Deprecated // Not used, just kept for config compatibility
 @XmlAccessorType(XmlAccessType.NONE)
-public class DefaultEmailNotification {
+public class DefaultEmailNotification implements EmailNotification {
 
     @XmlElement(required = true, name = "subject")
     private String subject;
@@ -34,4 +33,19 @@ public class DefaultEmailNotification {
 
     @XmlElement(required = false, name = "isHTML")
     private Boolean isHTML = false;
+
+    @Override
+    public String getSubject() {
+        return subject;
+    }
+
+    @Override
+    public String getTemplateName() {
+        return templateName;
+    }
+
+    @Override
+    public Boolean isHTML() {
+        return isHTML;
+    }
 }

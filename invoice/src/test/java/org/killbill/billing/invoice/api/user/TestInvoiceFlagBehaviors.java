@@ -1,6 +1,6 @@
 /*
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2017 Groupon, Inc
+ * Copyright 2014-2017 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -44,10 +44,6 @@ public class TestInvoiceFlagBehaviors extends InvoiceTestSuiteWithEmbeddedDB {
     @Override
     @BeforeMethod(groups = "slow")
     public void beforeMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         super.beforeMethod();
         final Account account = invoiceUtil.createAccount(callContext);
         accountId = account.getId();
@@ -57,7 +53,7 @@ public class TestInvoiceFlagBehaviors extends InvoiceTestSuiteWithEmbeddedDB {
     public void testWrittenOffInvoiceBeforeAccountCredit() throws Exception {
 
         // Create new invoice with one charge and expect account credit to be used
-        final List<InvoiceItem> items = invoiceUserApi.insertExternalCharges(accountId, clock.getUTCToday(), ImmutableList.<InvoiceItem>of(new ExternalChargeInvoiceItem(UUID.randomUUID(), clock.getUTCNow(), null, accountId, null, null, null, null, BigDecimal.TEN, accountCurrency, null)), true, null, callContext);
+        final List<InvoiceItem> items = invoiceUserApi.insertExternalCharges(accountId, null, ImmutableList.<InvoiceItem>of(new ExternalChargeInvoiceItem(UUID.randomUUID(), clock.getUTCNow(), null, accountId, null, null, null, BigDecimal.TEN, accountCurrency)), true, callContext);
         assertEquals(items.size(), 1);
 
         // Check both invoice and account balance is 10.00
@@ -85,7 +81,7 @@ public class TestInvoiceFlagBehaviors extends InvoiceTestSuiteWithEmbeddedDB {
         assertEquals(accountCBA1.compareTo(BigDecimal.ZERO), 0);
 
         // Add credit on the account
-        invoiceUserApi.insertCredit(accountId, BigDecimal.TEN, null, accountCurrency, true, null, null, null, callContext);
+        invoiceUserApi.insertCredit(accountId, BigDecimal.TEN, null, accountCurrency, true, null, callContext);
 
         final Invoice invoice2 = invoiceUserApi.getInvoice(invoiceId, callContext);
         assertEquals(invoice2.getBalance().compareTo(BigDecimal.ZERO), 0);
@@ -104,7 +100,7 @@ public class TestInvoiceFlagBehaviors extends InvoiceTestSuiteWithEmbeddedDB {
     public void testWrittenOffInvoiceWithAccountCredit() throws Exception {
 
         // Add credit on the account
-        invoiceUserApi.insertCredit(accountId, BigDecimal.TEN, null, accountCurrency, true, null, null, null, callContext);
+        invoiceUserApi.insertCredit(accountId, BigDecimal.TEN, null, accountCurrency, true, null, callContext);
 
         final BigDecimal accountBalance0 = invoiceUserApi.getAccountBalance(accountId, callContext);
         assertEquals(accountBalance0.compareTo(new BigDecimal("-10.0")), 0);
@@ -113,7 +109,7 @@ public class TestInvoiceFlagBehaviors extends InvoiceTestSuiteWithEmbeddedDB {
         assertEquals(accountCBA0.compareTo(BigDecimal.TEN), 0);
 
         // Create new invoice with one charge and expect account credit to be used
-        final List<InvoiceItem> items = invoiceUserApi.insertExternalCharges(accountId, clock.getUTCToday(), ImmutableList.<InvoiceItem>of(new ExternalChargeInvoiceItem(UUID.randomUUID(), clock.getUTCNow(), null, accountId, null, null, null, null, new BigDecimal("13.5"), accountCurrency, null)), true, null, callContext);
+        final List<InvoiceItem> items = invoiceUserApi.insertExternalCharges(accountId, null, ImmutableList.<InvoiceItem>of(new ExternalChargeInvoiceItem(UUID.randomUUID(), clock.getUTCNow(), null, accountId, null, null, null, new BigDecimal("13.5"), accountCurrency)), true, callContext);
         assertEquals(items.size(), 1);
 
         final BigDecimal accountBalance1 = invoiceUserApi.getAccountBalance(accountId, callContext);
@@ -137,9 +133,9 @@ public class TestInvoiceFlagBehaviors extends InvoiceTestSuiteWithEmbeddedDB {
     public void testMigratedInvoiceWithAccountCredit() throws Exception {
 
         // Add credit on the account
-        invoiceUserApi.insertCredit(accountId, BigDecimal.TEN, null, accountCurrency, true, null, null, null, callContext);
+        invoiceUserApi.insertCredit(accountId, BigDecimal.TEN, null, accountCurrency, true, null, callContext);
 
-        final UUID invoiceId = invoiceUserApi.createMigrationInvoice(accountId, null, ImmutableList.<InvoiceItem>of(new FixedPriceInvoiceItem(UUID.randomUUID(), clock.getUTCNow(), null, accountId, null, null, null, "foo", "bar", null, null, BigDecimal.ONE, accountCurrency)), callContext);
+        final UUID invoiceId = invoiceUserApi.createMigrationInvoice(accountId, null, ImmutableList.<InvoiceItem>of(new FixedPriceInvoiceItem(UUID.randomUUID(), clock.getUTCNow(), null, accountId, null, null, "foo", "bar", null, null, BigDecimal.ONE, accountCurrency)), callContext);
 
         final Invoice invoice1 = invoiceUserApi.getInvoice(invoiceId, callContext);
         assertEquals(invoice1.getBalance().compareTo(BigDecimal.ZERO), 0);
@@ -157,10 +153,10 @@ public class TestInvoiceFlagBehaviors extends InvoiceTestSuiteWithEmbeddedDB {
     public void testDraftInvoiceWithAccountCredit() throws Exception {
 
         // Add credit on the account
-        invoiceUserApi.insertCredit(accountId, BigDecimal.TEN, null, accountCurrency, true, null, null, null, callContext);
+        invoiceUserApi.insertCredit(accountId, BigDecimal.TEN, null, accountCurrency, true, null, callContext);
 
         // Create new invoice with one charge and expect account credit to be used
-        final List<InvoiceItem> items = invoiceUserApi.insertExternalCharges(accountId, clock.getUTCToday(), ImmutableList.<InvoiceItem>of(new ExternalChargeInvoiceItem(UUID.randomUUID(), clock.getUTCNow(), null, accountId, null, null, null, null, new BigDecimal("4.0"), accountCurrency, null)), false, null, callContext);
+        final List<InvoiceItem> items = invoiceUserApi.insertExternalCharges(accountId, null, ImmutableList.<InvoiceItem>of(new ExternalChargeInvoiceItem(UUID.randomUUID(), clock.getUTCNow(), null, accountId, null, null, null, new BigDecimal("4.0"), accountCurrency)), false, callContext);
         assertEquals(items.size(), 1);
 
         final UUID invoiceId = items.get(0).getInvoiceId();

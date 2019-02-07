@@ -31,9 +31,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.swagger.annotations.ApiModel;
 
-@ApiModel(value="PlanDetail")
 public class PlanDetailJson {
 
     final String product;
@@ -79,7 +77,7 @@ public class PlanDetailJson {
                                                                         try {
                                                                             return new PriceJson(price);
                                                                         } catch (final CurrencyValueNull e) {
-                                                                            return new PriceJson(price.getCurrency(), BigDecimal.ZERO);
+                                                                            return new PriceJson(price.getCurrency().toString(), BigDecimal.ZERO);
                                                                         }
                                                                     }
                                                                 });

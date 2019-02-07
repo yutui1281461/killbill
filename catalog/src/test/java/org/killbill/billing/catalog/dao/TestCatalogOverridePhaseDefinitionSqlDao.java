@@ -35,10 +35,6 @@ public class TestCatalogOverridePhaseDefinitionSqlDao extends CatalogTestSuiteWi
 
     @BeforeClass(groups = "slow")
     public void beforeClass() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         super.beforeClass();
         ((DBI) dbi).registerMapper(new LowerToCamelBeanMapperFactory(CatalogOverridePhaseDefinitionModelDao.class));
     }
@@ -107,7 +103,7 @@ public class TestCatalogOverridePhaseDefinitionSqlDao extends CatalogTestSuiteWi
             }
 
             private void checkRehydrated(final CatalogOverridePhaseDefinitionModelDao obj, final CatalogOverridePhaseDefinitionSqlDao sqlDao) {
-                final CatalogOverridePhaseDefinitionModelDao rehydrated = sqlDao.getByAttributes(obj.getParentPhaseName(), obj.getCurrency(), obj.getFixedPrice(), obj.getRecurringPrice(), internalCallContext).get(0);
+                final CatalogOverridePhaseDefinitionModelDao rehydrated = sqlDao.getByAttributes(obj.getParentPhaseName(), obj.getCurrency(), obj.getFixedPrice(), obj.getRecurringPrice(), internalCallContext);
                 assertEquals(rehydrated.getParentPhaseName(), obj.getParentPhaseName());
                 if (obj.getFixedPrice() != null) {
                     assertEquals(rehydrated.getFixedPrice().compareTo(obj.getFixedPrice()), 0);

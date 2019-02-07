@@ -47,21 +47,11 @@ where id = :id
 ;
 >>
 
-
-renameBundleExternalKey(prefix)  ::= <<
-update bundles
-set external_key = concat('kb', '<prefix>', '-', record_id, ':', external_key)
-where external_key = :externalKey
-<AND_CHECK_TENANT("")>
-;
->>
-
-getBundlesForLikeKey() ::= <<
+getBundlesForKey() ::= <<
 select <allTableFields("")>
 from bundles
 where
 external_key = :externalKey
-or external_key like concat('kb%-%:', :externalKey)
 <AND_CHECK_TENANT("")>
 <defaultOrderBy("")>
 ;

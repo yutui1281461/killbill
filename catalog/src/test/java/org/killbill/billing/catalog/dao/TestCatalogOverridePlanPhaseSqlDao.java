@@ -17,6 +17,7 @@
 
 package org.killbill.billing.catalog.dao;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,10 +37,6 @@ public class TestCatalogOverridePlanPhaseSqlDao extends CatalogTestSuiteWithEmbe
 
     @BeforeClass(groups = "slow")
     public void beforeClass() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         super.beforeClass();
         ((DBI) dbi).registerMapper(new LowerToCamelBeanMapperFactory(CatalogOverridePlanPhaseModelDao.class));
     }
@@ -63,6 +60,7 @@ public class TestCatalogOverridePlanPhaseSqlDao extends CatalogTestSuiteWithEmbe
             }
         });
     }
+
 
     @Test(groups = "slow")
     public void testGetTargetPlanDefinition() throws Exception {

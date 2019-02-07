@@ -46,10 +46,9 @@ public class TestCatalogPluginMapping extends CatalogTestSuiteNoDB {
         final StandaloneCatalog inputCatalog = XMLLoader.getObjectFromString(Resources.getResource("SpyCarAdvanced.xml").toExternalForm(), StandaloneCatalog.class);
         final StandalonePluginCatalog pluginCatalog = buildStandalonePluginCatalog(inputCatalog);
 
-        final StandaloneCatalogMapper mapper = new StandaloneCatalogMapper(inputCatalog.getCatalogName());
+        final StandaloneCatalogMapper mapper = new StandaloneCatalogMapper(inputCatalog.getCatalogName(), inputCatalog.getRecurringBillingMode());
 
-        final StandaloneCatalog output = mapper.toStandaloneCatalog(pluginCatalog);
-        output.setRecurringBillingMode(inputCatalog.getRecurringBillingMode());
+        final StandaloneCatalog output = mapper.toStandaloneCatalog(pluginCatalog, inputCatalog.getCatalogURI());
         Assert.assertEquals(output, inputCatalog);
 
     }

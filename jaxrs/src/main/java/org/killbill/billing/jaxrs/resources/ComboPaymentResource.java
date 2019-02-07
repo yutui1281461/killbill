@@ -1,6 +1,6 @@
 /*
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2015 Groupon, Inc
+ * Copyright 2015 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -31,7 +31,7 @@ import org.killbill.billing.jaxrs.json.AccountJson;
 import org.killbill.billing.jaxrs.json.PaymentMethodJson;
 import org.killbill.billing.jaxrs.util.Context;
 import org.killbill.billing.jaxrs.util.JaxrsUriBuilder;
-import org.killbill.billing.payment.api.InvoicePaymentApi;
+import org.killbill.billing.payment.api.Payment;
 import org.killbill.billing.payment.api.PaymentApi;
 import org.killbill.billing.payment.api.PaymentApiException;
 import org.killbill.billing.payment.api.PaymentMethod;
@@ -40,8 +40,10 @@ import org.killbill.billing.util.api.AuditUserApi;
 import org.killbill.billing.util.api.CustomFieldUserApi;
 import org.killbill.billing.util.api.TagUserApi;
 import org.killbill.billing.util.callcontext.CallContext;
+import org.killbill.billing.util.callcontext.TenantContext;
 import org.killbill.clock.Clock;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -55,16 +57,15 @@ public abstract class ComboPaymentResource extends JaxRsResourceBase {
                                 final AuditUserApi auditUserApi,
                                 final AccountUserApi accountUserApi,
                                 final PaymentApi paymentApi,
-                                final InvoicePaymentApi invoicePaymentApi,
                                 final Clock clock,
                                 final Context context) {
-        super(uriBuilder, tagUserApi, customFieldUserApi, auditUserApi, accountUserApi, paymentApi, invoicePaymentApi, null, clock, context);
+        super(uriBuilder, tagUserApi, customFieldUserApi, auditUserApi, accountUserApi, paymentApi, null, clock, context);
     }
 
     protected Account getOrCreateAccount(final AccountJson accountJson, final CallContext callContext) throws AccountApiException {
         // Attempt to retrieve by accountId if specified
         if (accountJson.getAccountId() != null) {
-            return accountUserApi.getAccountById(accountJson.getAccountId(), callContext);
+            return accountUserApi.getAccountById(UUID.fromString(accountJson.getAccountId()), callContext);
         }
 
         if (accountJson.getExternalKey() != null) {
@@ -86,11 +87,11 @@ public abstract class ComboPaymentResource extends JaxRsResourceBase {
         }
 
         // Get all payment methods for account
-        final List<PaymentMethod> accountPaymentMethods = paymentApi.getAccountPaymentMethods(account.getId(), false, false, ImmutableList.<PluginProperty>of(), callContext);
+        final List<PaymentMethod> accountPaymentMethods = paymentApi.getAccountPaymentMethods(account.getId(), false, ImmutableList.<PluginProperty>of(), callContext);
 
         // If we were specified a paymentMethod id and we find it, we return it
         if (paymentMethodJson.getPaymentMethodId() != null) {
-            final UUID match = paymentMethodJson.getPaymentMethodId();
+            final UUID match = UUID.fromString(paymentMethodJson.getPaymentMethodId());
             if (Iterables.any(accountPaymentMethods, new Predicate<PaymentMethod>() {
                 @Override
                 public boolean apply(final PaymentMethod input) {
@@ -117,9 +118,18 @@ public abstract class ComboPaymentResource extends JaxRsResourceBase {
 
         // Only set as default if this is the first paymentMethod on the account
         final boolean isDefault = accountPaymentMethods.isEmpty();
-        final PaymentMethod paymentData = paymentMethodJson.toPaymentMethod(account.getId());
+        final PaymentMethod paymentData = paymentMethodJson.toPaymentMethod(account.getId().toString());
         return paymentApi.addPaymentMethod(account, paymentMethodJson.getExternalKey(), paymentMethodJson.getPluginName(), isDefault,
                                            paymentData.getPluginDetail(), pluginProperties, callContext);
     }
 
+    protected Payment getPaymentByIdOrKey(@Nullable final String paymentIdStr, @Nullable final String externalKey, final Iterable<PluginProperty> pluginProperties, final TenantContext tenantContext) throws PaymentApiException {
+        Preconditions.checkArgument(paymentIdStr != null || externalKey != null, "Need to set either paymentId or payment externalKey");
+        if (paymentIdStr != null) {
+            final UUID paymentId = UUID.fromString(paymentIdStr);
+            return paymentApi.getPayment(paymentId, false, false, pluginProperties, tenantContext);
+        } else {
+            return paymentApi.getPaymentByExternalKey(externalKey, false, false, pluginProperties, tenantContext);
+        }
+    }
 }

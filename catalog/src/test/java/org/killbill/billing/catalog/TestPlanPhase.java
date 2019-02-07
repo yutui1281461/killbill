@@ -33,14 +33,14 @@ public class TestPlanPhase extends CatalogTestSuiteNoDB {
         final MockCatalog catalog = new MockCatalog();
 
         DefaultPlanPhase pp = MockPlanPhase.createUSDMonthlyEvergreen(null, "1.00").setPlan(MockPlan.createBicycleNoTrialEvergreen1USD());
-        pp.initialize(catalog);
+        pp.initialize(catalog, null);
 
         ValidationErrors errors = pp.validate(catalog, new ValidationErrors());
         errors.log(log);
         Assert.assertEquals(errors.size(), 1);
 
         pp = MockPlanPhase.createUSDMonthlyEvergreen("1.00", null).setRecurring(new MockRecurring(BillingPeriod.NO_BILLING_PERIOD, MockInternationalPrice.createUSD("1.00")).setPhase(pp)).setPlan(MockPlan.createBicycleNoTrialEvergreen1USD());
-        pp.initialize(catalog);
+        pp.initialize(catalog, null);
         errors = pp.validate(catalog, new ValidationErrors());
         errors.log(log);
         Assert.assertEquals(errors.size(), 1);

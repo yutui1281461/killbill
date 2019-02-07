@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2017 Groupon, Inc
+ * Copyright 2014-2017 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -21,7 +21,6 @@ package org.killbill.billing.invoice;
 import java.util.UUID;
 
 import org.joda.time.DateTime;
-import org.killbill.billing.ErrorCode;
 import org.killbill.billing.account.api.Account;
 import org.killbill.billing.account.api.AccountApiException;
 import org.killbill.billing.account.api.AccountInternalApi;
@@ -29,24 +28,15 @@ import org.killbill.billing.callcontext.InternalCallContext;
 import org.killbill.billing.events.BlockingTransitionInternalEvent;
 import org.killbill.billing.events.EffectiveSubscriptionInternalEvent;
 import org.killbill.billing.events.InvoiceCreationInternalEvent;
-import org.killbill.billing.events.RequestedSubscriptionInternalEvent;
 import org.killbill.billing.invoice.api.InvoiceApiException;
 import org.killbill.billing.invoice.api.InvoiceInternalApi;
-import org.killbill.billing.invoice.api.InvoiceListenerService;
 import org.killbill.billing.invoice.api.user.DefaultInvoiceAdjustmentEvent;
-import org.killbill.billing.platform.api.LifecycleHandlerType;
-import org.killbill.billing.platform.api.LifecycleHandlerType.LifecycleLevel;
 import org.killbill.billing.subscription.api.SubscriptionBaseTransitionType;
 import org.killbill.billing.util.callcontext.CallOrigin;
 import org.killbill.billing.util.callcontext.InternalCallContextFactory;
 import org.killbill.billing.util.callcontext.UserType;
+import org.killbill.billing.util.config.definition.InvoiceConfig;
 import org.killbill.clock.Clock;
-import org.killbill.notificationq.api.NotificationQueueService;
-import org.killbill.notificationq.api.NotificationQueueService.NoSuchNotificationQueue;
-import org.killbill.queue.retry.RetryableService;
-import org.killbill.queue.retry.RetryableSubscriber;
-import org.killbill.queue.retry.RetryableSubscriber.SubscriberAction;
-import org.killbill.queue.retry.RetryableSubscriber.SubscriberQueueHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,178 +44,78 @@ import com.google.common.eventbus.AllowConcurrentEvents;
 import com.google.common.eventbus.Subscribe;
 import com.google.inject.Inject;
 
-@SuppressWarnings("TypeMayBeWeakened")
-public class InvoiceListener extends RetryableService implements InvoiceListenerService {
-
-    public static final String INVOICE_LISTENER_SERVICE_NAME = "invoice-listener-service";
+public class InvoiceListener {
 
     private static final Logger log = LoggerFactory.getLogger(InvoiceListener.class);
 
     private final InvoiceDispatcher dispatcher;
     private final InternalCallContextFactory internalCallContextFactory;
+    private final AccountInternalApi accountApi;
     private final InvoiceInternalApi invoiceApi;
-    private final RetryableSubscriber retryableSubscriber;
-    private final SubscriberQueueHandler subscriberQueueHandler = new SubscriberQueueHandler();
+    private final InvoiceConfig invoiceConfig;
+    private final Clock clock;
 
     @Inject
-    public InvoiceListener(final AccountInternalApi accountApi,
-                           final InternalCallContextFactory internalCallContextFactory,
-                           final InvoiceDispatcher dispatcher,
-                           final InvoiceInternalApi invoiceApi,
-                           final NotificationQueueService notificationQueueService,
-                           final Clock clock) {
-        super(notificationQueueService);
+    public InvoiceListener(final AccountInternalApi accountApi, final Clock clock, final InternalCallContextFactory internalCallContextFactory,
+                           final InvoiceConfig invoiceConfig, final InvoiceDispatcher dispatcher, InvoiceInternalApi invoiceApi) {
+        this.accountApi = accountApi;
         this.dispatcher = dispatcher;
+        this.invoiceConfig = invoiceConfig;
         this.internalCallContextFactory = internalCallContextFactory;
+        this.clock = clock;
         this.invoiceApi = invoiceApi;
-
-        subscriberQueueHandler.subscribe(EffectiveSubscriptionInternalEvent.class,
-                                         new SubscriberAction<EffectiveSubscriptionInternalEvent>() {
-                                             @Override
-                                             public void run(final EffectiveSubscriptionInternalEvent event) {
-                                                 try {
-                                                     //  Skip future uncancel event
-                                                     //  Skip events which are marked as not being the last one
-                                                     if (event.getTransitionType() == SubscriptionBaseTransitionType.UNCANCEL ||
-                                                         event.getRemainingEventsForUserOperation() > 0) {
-                                                         return;
-                                                     }
-                                                     final InternalCallContext context = internalCallContextFactory.createInternalCallContext(event.getSearchKey2(), event.getSearchKey1(), "SubscriptionBaseTransition", CallOrigin.INTERNAL, UserType.SYSTEM, event.getUserToken());
-                                                     dispatcher.processSubscriptionForInvoiceGeneration(event, context);
-                                                 } catch (final InvoiceApiException e) {
-                                                     log.warn("Unable to process event {}", event, e);
-                                                 }
-                                             }
-                                         });
-        subscriberQueueHandler.subscribe(BlockingTransitionInternalEvent.class,
-                                         new SubscriberAction<BlockingTransitionInternalEvent>() {
-                                             @Override
-                                             public void run(final BlockingTransitionInternalEvent event) {
-                                                 // We are only interested in blockBilling or unblockBilling transitions.
-                                                 if (!event.isTransitionedToUnblockedBilling() && !event.isTransitionedToBlockedBilling()) {
-                                                     return;
-                                                 }
-
-                                                 try {
-                                                     final InternalCallContext context = internalCallContextFactory.createInternalCallContext(event.getSearchKey2(), event.getSearchKey1(), "SubscriptionBaseTransition", CallOrigin.INTERNAL, UserType.SYSTEM, event.getUserToken());
-                                                     final UUID accountId = accountApi.getByRecordId(event.getSearchKey1(), context);
-                                                     dispatcher.processAccountFromNotificationOrBusEvent(accountId, null, null, false, context);
-                                                 } catch (final InvoiceApiException e) {
-                                                     log.warn("Unable to process event {}", event, e);
-                                                 } catch (final AccountApiException e) {
-                                                     log.warn("Unable to process event {}", event, e);
-                                                 }
-                                             }
-                                         });
-        subscriberQueueHandler.subscribe(InvoiceCreationInternalEvent.class,
-                                         new SubscriberAction<InvoiceCreationInternalEvent>() {
-                                             @Override
-                                             public void run(final InvoiceCreationInternalEvent event) {
-                                                 try {
-                                                     final InternalCallContext context = internalCallContextFactory.createInternalCallContext(event.getSearchKey2(), event.getSearchKey1(), "CreateParentInvoice", CallOrigin.INTERNAL, UserType.SYSTEM, event.getUserToken());
-                                                     final Account account = accountApi.getAccountById(event.getAccountId(), context);
-
-                                                     // catch children invoices and populate the parent summary invoice
-                                                     if (isChildrenAccountAndPaymentDelegated(account)) {
-                                                         dispatcher.processParentInvoiceForInvoiceGeneration(account, event.getInvoiceId(), context);
-                                                     }
-
-                                                 } catch (final InvoiceApiException e) {
-                                                     log.warn("Unable to process event {}", event, e);
-                                                 } catch (final AccountApiException e) {
-                                                     log.warn("Unable to process event {}", event, e);
-                                                 }
-                                             }
-                                         });
-        subscriberQueueHandler.subscribe(DefaultInvoiceAdjustmentEvent.class,
-                                         new SubscriberAction<DefaultInvoiceAdjustmentEvent>() {
-                                             @Override
-                                             public void run(final DefaultInvoiceAdjustmentEvent event) {
-                                                 try {
-                                                     final InternalCallContext context = internalCallContextFactory.createInternalCallContext(event.getSearchKey2(), event.getSearchKey1(), "AdjustParentInvoice", CallOrigin.INTERNAL, UserType.SYSTEM, event.getUserToken());
-                                                     final Account account = accountApi.getAccountById(event.getAccountId(), context);
-
-                                                     // catch children invoices and populate the parent summary invoice
-                                                     if (isChildrenAccountAndPaymentDelegated(account)) {
-                                                         dispatcher.processParentInvoiceForAdjustments(account, event.getInvoiceId(), context);
-                                                     }
-                                                 } catch (final InvoiceApiException e) {
-                                                     log.warn("Unable to process event {}", event, e);
-                                                 } catch (final AccountApiException e) {
-                                                     log.warn("Unable to process event {}", event, e);
-                                                 }
-                                             }
-                                         });
-        subscriberQueueHandler.subscribe(RequestedSubscriptionInternalEvent.class,
-                                         new SubscriberAction<RequestedSubscriptionInternalEvent>() {
-                                             @Override
-                                             public void run(final RequestedSubscriptionInternalEvent event) {
-                                                 final InternalCallContext context = internalCallContextFactory.createInternalCallContext(event.getSearchKey2(), event.getSearchKey1(), "SubscriptionBaseTransition", CallOrigin.INTERNAL, UserType.SYSTEM, event.getUserToken());
-                                                 dispatcher.processSubscriptionStartRequestedDate(event, context);
-                                             }
-                                         });
-
-        this.retryableSubscriber = new RetryableSubscriber(clock, this, subscriberQueueHandler);
-    }
-
-    @Override
-    public String getName() {
-        return INVOICE_LISTENER_SERVICE_NAME;
-    }
-
-
-    @Override
-    public int getRegistrationOrdering() {
-        return KILLBILL_SERVICES.INVOICE_SERVICE.getRegistrationOrdering() + 1;
-    }
-
-    @LifecycleHandlerType(LifecycleLevel.INIT_SERVICE)
-    public void initialize() {
-        super.initialize("invoice-listener", subscriberQueueHandler);
-    }
-
-    @LifecycleHandlerType(LifecycleLevel.START_SERVICE)
-    public void start() {
-        super.start();
-    }
-
-    @LifecycleHandlerType(LifecycleLevel.STOP_SERVICE)
-    public void stop() throws NoSuchNotificationQueue {
-        super.stop();
     }
 
     @AllowConcurrentEvents
     @Subscribe
     public void handleSubscriptionTransition(final EffectiveSubscriptionInternalEvent event) {
-        retryableSubscriber.handleEvent(event);
+        try {
+            //  Skip future uncancel event
+            //  Skip events which are marked as not being the last one
+            if (event.getTransitionType() == SubscriptionBaseTransitionType.UNCANCEL ||
+                event.getRemainingEventsForUserOperation() > 0) {
+                return;
+            }
+            final InternalCallContext context = internalCallContextFactory.createInternalCallContext(event.getSearchKey2(), event.getSearchKey1(), "SubscriptionBaseTransition", CallOrigin.INTERNAL, UserType.SYSTEM, event.getUserToken());
+            dispatcher.processSubscriptionForInvoiceGeneration(event, context);
+        } catch (InvoiceApiException e) {
+            log.warn("Unable to process event {}", event, e);
+        }
     }
 
     @AllowConcurrentEvents
     @Subscribe
     public void handleBlockingStateTransition(final BlockingTransitionInternalEvent event) {
-        retryableSubscriber.handleEvent(event);
-    }
+        // We are only interested in blockBilling or unblockBilling transitions.
+        if (!event.isTransitionedToUnblockedBilling() && !event.isTransitionedToBlockedBilling()) {
+            return;
+        }
 
-    @AllowConcurrentEvents
-    @Subscribe
-    public void handleSubscriptionTransition(final RequestedSubscriptionInternalEvent event) {
-        retryableSubscriber.handleEvent(event);
-    }
-
-    public void handleNextBillingDateEvent(final UUID subscriptionId, final DateTime eventDateTime, final boolean isRescheduled, final UUID userToken, final Long accountRecordId, final Long tenantRecordId) {
-        final InternalCallContext context = internalCallContextFactory.createInternalCallContext(tenantRecordId, accountRecordId, "Next Billing Date", CallOrigin.INTERNAL, UserType.SYSTEM, userToken);
         try {
-            dispatcher.processSubscriptionForInvoiceGeneration(subscriptionId, context.toLocalDate(eventDateTime), isRescheduled, context);
-        } catch (final InvoiceApiException e) {
+            final InternalCallContext context = internalCallContextFactory.createInternalCallContext(event.getSearchKey2(), event.getSearchKey1(), "SubscriptionBaseTransition", CallOrigin.INTERNAL, UserType.SYSTEM, event.getUserToken());
+            final UUID accountId = accountApi.getByRecordId(event.getSearchKey1(), context);
+            dispatcher.processAccountFromNotificationOrBusEvent(accountId, null, null, context);
+        } catch (InvoiceApiException e) {
+            log.warn("Unable to process event {}", event, e);
+        } catch (AccountApiException e) {
+            log.warn("Unable to process event {}", event, e);
+        }
+    }
+
+    public void handleNextBillingDateEvent(final UUID subscriptionId, final DateTime eventDateTime, final UUID userToken, final Long accountRecordId, final Long tenantRecordId) {
+        try {
+            final InternalCallContext context = internalCallContextFactory.createInternalCallContext(tenantRecordId, accountRecordId, "Next Billing Date", CallOrigin.INTERNAL, UserType.SYSTEM, userToken);
+            dispatcher.processSubscriptionForInvoiceGeneration(subscriptionId, context.toLocalDate(eventDateTime), context);
+        } catch (InvoiceApiException e) {
             log.warn("Unable to process subscriptionId='{}', eventDateTime='{}'", subscriptionId, eventDateTime, e);
         }
     }
 
     public void handleEventForInvoiceNotification(final UUID subscriptionId, final DateTime eventDateTime, final UUID userToken, final Long accountRecordId, final Long tenantRecordId) {
-        final InternalCallContext context = internalCallContextFactory.createInternalCallContext(tenantRecordId, accountRecordId, "Next Billing Date", CallOrigin.INTERNAL, UserType.SYSTEM, userToken);
         try {
+            final InternalCallContext context = internalCallContextFactory.createInternalCallContext(tenantRecordId, accountRecordId, "Next Billing Date", CallOrigin.INTERNAL, UserType.SYSTEM, userToken);
             dispatcher.processSubscriptionForInvoiceNotification(subscriptionId, context.toLocalDate(eventDateTime), context);
-        } catch (final InvoiceApiException e) {
+        } catch (InvoiceApiException e) {
             log.warn("Unable to process subscriptionId='{}', eventDateTime='{}'", subscriptionId, eventDateTime, e);
         }
     }
@@ -233,7 +123,21 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
     @AllowConcurrentEvents
     @Subscribe
     public void handleChildrenInvoiceCreationEvent(final InvoiceCreationInternalEvent event) {
-        retryableSubscriber.handleEvent(event);
+
+        try {
+            final InternalCallContext context = internalCallContextFactory.createInternalCallContext(event.getSearchKey2(), event.getSearchKey1(), "CreateParentInvoice", CallOrigin.INTERNAL, UserType.SYSTEM, event.getUserToken());
+            final Account account = accountApi.getAccountById(event.getAccountId(), context);
+
+            // catch children invoices and populate the parent summary invoice
+            if (isChildrenAccountAndPaymentDelegated(account)) {
+                dispatcher.processParentInvoiceForInvoiceGeneration(account, event.getInvoiceId(), context);
+            }
+
+        } catch (InvoiceApiException e) {
+            log.error(e.getMessage());
+        } catch (AccountApiException e) {
+            log.error(e.getMessage());
+        }
     }
 
     private boolean isChildrenAccountAndPaymentDelegated(final Account account) {
@@ -244,17 +148,29 @@ public class InvoiceListener extends RetryableService implements InvoiceListener
         try {
             final InternalCallContext context = internalCallContextFactory.createInternalCallContext(tenantRecordId, accountRecordId, "Commit Invoice", CallOrigin.INTERNAL, UserType.SYSTEM, userToken);
             invoiceApi.commitInvoice(invoiceId, context);
-        } catch (final InvoiceApiException e) {
-            // In case we commit parent invoice earlier we expect to see an INVOICE_INVALID_STATUS status
-            if (ErrorCode.INVOICE_INVALID_STATUS.getCode() != e.getCode()) {
-                log.error(e.getMessage());
-            }
+        } catch (InvoiceApiException e) {
+            log.error(e.getMessage());
         }
     }
 
     @AllowConcurrentEvents
     @Subscribe
     public void handleChildrenInvoiceAdjustmentEvent(final DefaultInvoiceAdjustmentEvent event) {
-        retryableSubscriber.handleEvent(event);
+
+        try {
+            final InternalCallContext context = internalCallContextFactory.createInternalCallContext(event.getSearchKey2(), event.getSearchKey1(), "AdjustParentInvoice", CallOrigin.INTERNAL, UserType.SYSTEM, event.getUserToken());
+            final Account account = accountApi.getAccountById(event.getAccountId(), context);
+
+            // catch children invoices and populate the parent summary invoice
+            if (isChildrenAccountAndPaymentDelegated(account)) {
+                dispatcher.processParentInvoiceForAdjustments(account, event.getInvoiceId(), context);
+            }
+
+        } catch (InvoiceApiException e) {
+            log.error(e.getMessage());
+        } catch (AccountApiException e) {
+            log.error(e.getMessage());
+        }
     }
+
 }

@@ -18,7 +18,6 @@ package org.killbill.billing.util.dao;
 
 import java.util.List;
 
-import org.killbill.billing.ObjectType;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -39,7 +38,7 @@ public class TestPagination extends UtilTestSuiteWithEmbeddedDB {
             final String definitionName = "name-" + i;
             final String description = "description-" + i;
             eventsListener.pushExpectedEvent(NextEvent.TAG_DEFINITION);
-            tagDefinitionDao.create(definitionName, description, ObjectType.ACCOUNT.name(), internalCallContext);
+            tagDefinitionDao.create(definitionName, description, internalCallContext);
             assertListenerStatus();
         }
 

@@ -1,10 +1,6 @@
-<p align="center">
-  <img src="https://github.com/killbill/killbill-docs/raw/v3/userguide/assets/img/logo.png" alt="Kill Bill logo" style="max-width:100%;">
-</p>
+## Kill Bill
 
-# Kill Bill
-
-Kill Bill is the open-source subscription billing and payments platform.
+Kill Bill is the Open-Source Billing & Payment Platform.
 
 ## Among features
 
@@ -17,8 +13,20 @@ You can find more information on [killbill.io](http://killbill.io).
 
 ## Getting started
 
-All of our documentation can be found at [docs.killbill.io](http://docs.killbill.io) (sources in the [killbill/killbill-docs](https://github.com/killbill/killbill-docs) repository).
+* [Tutorials](http://killbill.io/tutorials/)
+* [User guides](http://killbill.io/userguide/) (source in the [killbill-docs](https://github.com/killbill/killbill-docs) repo)
+* [Wiki](https://github.com/killbill/killbill/wiki)
+
+## Build
+
+Build is handled by Maven:
+
+```
+mvn clean install -DskipTests=true
+```
+
+Note: some third-party artifacts (such as metrics-guice) are released in Bintray. Make sure to follow the instructions [here](https://bintray.com/bintray/jcenter) (Set me up! button) to update your settings.xml.
 
 ## License
 
-Kill Bill is released under the [Apache license 2.0](http://www.apache.org/licenses/LICENSE-2.0).
+Kill Bill is released under the [Apache license](http://www.apache.org/licenses/LICENSE-2.0).

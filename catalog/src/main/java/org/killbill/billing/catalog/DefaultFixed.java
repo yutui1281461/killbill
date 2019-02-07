@@ -1,6 +1,5 @@
 /*
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -17,10 +16,6 @@
 
 package org.killbill.billing.catalog;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.net.URI;
 
 import javax.xml.bind.annotation.XmlAccessType;
@@ -36,7 +31,7 @@ import org.killbill.xmlloader.ValidatingConfig;
 import org.killbill.xmlloader.ValidationErrors;
 
 @XmlAccessorType(XmlAccessType.NONE)
-public class DefaultFixed extends ValidatingConfig<StandaloneCatalog> implements Fixed, Externalizable {
+public class DefaultFixed extends ValidatingConfig<StandaloneCatalog> implements Fixed {
 
     @XmlAttribute(required = false)
     private FixedType type;
@@ -54,7 +49,6 @@ public class DefaultFixed extends ValidatingConfig<StandaloneCatalog> implements
         return fixedPrice;
     }
 
-    // Required for deserialization
     public DefaultFixed() {
     }
 
@@ -64,11 +58,11 @@ public class DefaultFixed extends ValidatingConfig<StandaloneCatalog> implements
     }
 
     @Override
-    public void initialize(final StandaloneCatalog root) {
-        super.initialize(root);
+    public void initialize(final StandaloneCatalog root, final URI uri) {
+        super.initialize(root, uri);
         CatalogSafetyInitializer.initializeNonRequiredNullFieldsWithDefaultValue(this);
         if (fixedPrice != null) {
-            fixedPrice.initialize(root);
+            fixedPrice.initialize(root, uri);
         }
     }
 
@@ -117,20 +111,5 @@ public class DefaultFixed extends ValidatingConfig<StandaloneCatalog> implements
         int result = type != null ? type.hashCode() : 0;
         result = 31 * result + (fixedPrice != null ? fixedPrice.hashCode() : 0);
         return result;
-    }
-
-    @Override
-    public void writeExternal(final ObjectOutput out) throws IOException {
-        out.writeBoolean(type != null);
-        if (type != null) {
-            out.writeUTF(type.name());
-        }
-        out.writeObject(fixedPrice);
-    }
-
-    @Override
-    public void readExternal(final ObjectInput in) throws IOException, ClassNotFoundException {
-        this.type = in.readBoolean() ? FixedType.valueOf(in.readUTF()) : null;
-        this.fixedPrice = (DefaultInternationalPrice) in.readObject();
     }
 }

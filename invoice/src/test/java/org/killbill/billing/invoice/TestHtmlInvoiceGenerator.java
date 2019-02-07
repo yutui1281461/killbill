@@ -50,10 +50,6 @@ public class TestHtmlInvoiceGenerator extends InvoiceTestSuiteNoDB {
     @Override
     @BeforeClass(groups = "fast")
     public void beforeClass() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         super.beforeClass();
         final TranslatorConfig config = new ConfigurationObjectFactory(skifeConfigSource).build(TranslatorConfig.class);
         final TemplateEngine templateEngine = new MustacheTemplateEngine();

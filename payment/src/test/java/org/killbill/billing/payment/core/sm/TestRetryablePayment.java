@@ -129,10 +129,6 @@ public class TestRetryablePayment extends PaymentTestSuiteNoDB {
 
     @BeforeClass(groups = "fast")
     public void beforeClass() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         super.beforeClass();
         account = testHelper.createTestAccount("lolo@gmail.com", false);
         Mockito.when(accountInternalApi.getAccountById(Mockito.<UUID>any(), Mockito.<InternalTenantContext>any())).thenReturn(account);
@@ -158,9 +154,6 @@ public class TestRetryablePayment extends PaymentTestSuiteNoDB {
 
     @BeforeMethod(groups = "fast")
     public void beforeMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
         super.beforeMethod();
         this.utcNow = clock.getUTCNow();
 
@@ -178,8 +171,7 @@ public class TestRetryablePayment extends PaymentTestSuiteNoDB {
                 paymentSMHelper,
                 retrySMHelper,
                 controlPluginRunner,
-                eventBus,
-                paymentRefresher);
+                eventBus);
 
         paymentStateContext =
                 new PaymentStateControlContext(ImmutableList.<String>of(MockPaymentControlProviderPlugin.PLUGIN_NAME),
@@ -194,7 +186,6 @@ public class TestRetryablePayment extends PaymentTestSuiteNoDB {
                                                paymentMethodId,
                                                amount,
                                                currency,
-                                               null,
                                                emptyProperties,
                                                internalCallContext,
                                                callContext);
@@ -248,7 +239,6 @@ public class TestRetryablePayment extends PaymentTestSuiteNoDB {
                        paymentTransactionExternalKey,
                        amount,
                        currency,
-                       null,
                        emptyProperties,
                        null,
                        callContext,
@@ -290,7 +280,6 @@ public class TestRetryablePayment extends PaymentTestSuiteNoDB {
                    paymentTransactionExternalKey,
                    amount,
                    currency,
-                   null,
                    emptyProperties,
                    null,
                    callContext,
@@ -326,7 +315,6 @@ public class TestRetryablePayment extends PaymentTestSuiteNoDB {
                    paymentTransactionExternalKey,
                    amount,
                    currency,
-                   null,
                    emptyProperties,
                    null,
                    callContext, internalCallContext);
@@ -362,7 +350,6 @@ public class TestRetryablePayment extends PaymentTestSuiteNoDB {
                        paymentTransactionExternalKey,
                        amount,
                        currency,
-                       null,
                        emptyProperties,
                        null,
                        callContext, internalCallContext);
@@ -402,7 +389,6 @@ public class TestRetryablePayment extends PaymentTestSuiteNoDB {
                        paymentTransactionExternalKey,
                        amount,
                        currency,
-                       null,
                        emptyProperties,
                        null,
                        callContext, internalCallContext);
@@ -441,7 +427,6 @@ public class TestRetryablePayment extends PaymentTestSuiteNoDB {
                        paymentTransactionExternalKey,
                        amount,
                        currency,
-                       null,
                        emptyProperties,
                        null,
                        callContext, internalCallContext);
@@ -480,7 +465,6 @@ public class TestRetryablePayment extends PaymentTestSuiteNoDB {
                        paymentTransactionExternalKey,
                        amount,
                        currency,
-                       null,
                        emptyProperties,
                        null,
                        callContext, internalCallContext);
@@ -526,7 +510,6 @@ public class TestRetryablePayment extends PaymentTestSuiteNoDB {
                    paymentTransactionExternalKey,
                    amount,
                    currency,
-                   null,
                    emptyProperties,
                    null,
                    callContext,
@@ -578,7 +561,6 @@ public class TestRetryablePayment extends PaymentTestSuiteNoDB {
                        paymentTransactionExternalKey,
                        amount,
                        currency,
-                       null,
                        emptyProperties,
                        null,
                        callContext,
@@ -627,7 +609,6 @@ public class TestRetryablePayment extends PaymentTestSuiteNoDB {
                        paymentTransactionExternalKey,
                        amount,
                        currency,
-                       null,
                        emptyProperties,
                        null,
                        callContext,

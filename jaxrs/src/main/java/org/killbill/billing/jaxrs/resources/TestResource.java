@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2017 Groupon, Inc
+ * Copyright 2014-2017 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -18,13 +18,13 @@
 
 package org.killbill.billing.jaxrs.resources;
 
-import java.util.Iterator;
-
 import javax.inject.Inject;
 import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -32,23 +32,28 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.core.UriInfo;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
 import org.killbill.billing.ObjectType;
 import org.killbill.billing.account.api.AccountUserApi;
+import org.killbill.billing.catalog.api.CatalogApiException;
 import org.killbill.billing.catalog.api.CatalogUserApi;
 import org.killbill.billing.jaxrs.util.Context;
 import org.killbill.billing.jaxrs.util.JaxrsUriBuilder;
-import org.killbill.billing.payment.api.InvoicePaymentApi;
 import org.killbill.billing.payment.api.PaymentApi;
+import org.killbill.billing.tenant.api.TenantApiException;
+import org.killbill.billing.tenant.api.TenantKV.TenantKey;
 import org.killbill.billing.tenant.api.TenantUserApi;
 import org.killbill.billing.util.api.AuditUserApi;
 import org.killbill.billing.util.api.CustomFieldUserApi;
 import org.killbill.billing.util.api.RecordIdApi;
 import org.killbill.billing.util.api.TagUserApi;
+import org.killbill.billing.util.cache.Cachable.CacheType;
 import org.killbill.billing.util.cache.CacheControllerDispatcher;
+import org.killbill.billing.util.callcontext.CallContext;
 import org.killbill.billing.util.callcontext.TenantContext;
 import org.killbill.bus.api.BusEvent;
 import org.killbill.bus.api.BusEventWithMetadata;
@@ -82,7 +87,7 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 //
 //
 @Path(JaxrsResource.TEST_PATH)
-@Api(value = JaxrsResource.TEST_PATH, description = "Operations for testing", hidden=true)
+@Api(value = JaxrsResource.TEST_PATH, description = "Operations for testing")
 public class TestResource extends JaxRsResourceBase {
 
     private static final Logger log = LoggerFactory.getLogger(TestResource.class);
@@ -99,9 +104,9 @@ public class TestResource extends JaxRsResourceBase {
     public TestResource(final JaxrsUriBuilder uriBuilder, final TagUserApi tagUserApi, final CustomFieldUserApi customFieldUserApi,
                         final AuditUserApi auditUserApi, final AccountUserApi accountUserApi, final RecordIdApi recordIdApi,
                         final PersistentBus persistentBus, final NotificationQueueService notificationQueueService, final PaymentApi paymentApi,
-                        final InvoicePaymentApi invoicePaymentApi, final TenantUserApi tenantApi, final CatalogUserApi catalogUserApi,
+                        final TenantUserApi tenantApi, final CatalogUserApi catalogUserApi,
                         final Clock clock, final CacheControllerDispatcher cacheControllerDispatcher, final Context context) {
-        super(uriBuilder, tagUserApi, customFieldUserApi, auditUserApi, accountUserApi, paymentApi, invoicePaymentApi, null, clock, context);
+        super(uriBuilder, tagUserApi, customFieldUserApi, auditUserApi, accountUserApi, paymentApi, null, clock, context);
         this.persistentBus = persistentBus;
         this.notificationQueueService = notificationQueueService;
         this.recordIdApi = recordIdApi;
@@ -165,8 +170,7 @@ public class TestResource extends JaxRsResourceBase {
     @Path("/clock")
     @Produces(APPLICATION_JSON)
     @ApiOperation(value = "Set the current time", response = ClockResource.class)
-    @ApiResponses(value = {/* @ApiResponse(code = 200, message = "Successful"), */
-                           @ApiResponse(code = 400, message = "Invalid time or timezone supplied")})
+    @ApiResponses(value = {@ApiResponse(code = 400, message = "Invalid time or timezone supplied")})
     public Response setTestClockTime(@QueryParam(QUERY_REQUESTED_DT) final String requestedClockDate,
                                      @QueryParam("timeZone") final String timeZoneStr,
                                      @QueryParam("timeoutSec") @DefaultValue("5") final Long timeoutSec,
@@ -174,6 +178,7 @@ public class TestResource extends JaxRsResourceBase {
 
         final ClockMock testClock = getClockMock();
         if (requestedClockDate == null) {
+            log.info("************      RESETTING CLOCK to " + clock.getUTCNow());
             testClock.resetDeltaFromReality();
         } else {
             final DateTime newTime = DATE_TIME_FORMATTER.parseDateTime(requestedClockDate).toDateTime(DateTimeZone.UTC);
@@ -216,8 +221,34 @@ public class TestResource extends JaxRsResourceBase {
 
 
 
+    @DELETE
+    @Path("/catalog")
+    @Produces(APPLICATION_JSON)
+    @ApiOperation(value = "Delete all versions for a per tenant catalog")
+    @ApiResponses(value = {@ApiResponse(code = 400, message = "Invalid subscription id supplied"),
+                           @ApiResponse(code = 404, message = "Entitlement not found")})
+    public Response deleteCatalog(@HeaderParam(HDR_CREATED_BY) final String createdBy,
+                                  @HeaderParam(HDR_REASON) final String reason,
+                                  @HeaderParam(HDR_COMMENT) final String comment,
+                                  @javax.ws.rs.core.Context final UriInfo uriInfo,
+                                  @javax.ws.rs.core.Context final HttpServletRequest request) throws TenantApiException, CatalogApiException {
+
+        final CallContext callContext = context.createContext(createdBy, reason, comment, request);
+
+        // remove for all tenants-- otherwise we need to convert the callContext into an internalTenantContext to get the key
+        cacheControllerDispatcher.getCacheController(CacheType.TENANT_CATALOG).removeAll();
+        // Soft delete the current entry
+        tenantApi.deleteTenantKey(TenantKey.CATALOG.toString(), callContext);
+
+        // Recreate default entry so that user does not default to KB default catalog
+        catalogUserApi.createDefaultEmptyCatalog(clock.getUTCNow(),callContext);
+
+        return Response.status(Status.OK).build();
+    }
+
+
     private boolean waitForNotificationToComplete(final ServletRequest request, final Long timeoutSec) {
-        final TenantContext tenantContext = context.createTenantContextNoAccountId(request);
+        final TenantContext tenantContext = context.createContext(request);
         final Long tenantRecordId = recordIdApi.getRecordId(tenantContext.getTenantId(), ObjectType.TENANT, tenantContext);
 
         int nbTryLeft = timeoutSec != null ? timeoutSec.intValue() : 0;
@@ -249,18 +280,9 @@ public class TestResource extends JaxRsResourceBase {
     private boolean areAllNotificationsProcessed(final Long tenantRecordId) {
         int nbNotifications = 0;
         for (final NotificationQueue notificationQueue : notificationQueueService.getNotificationQueues()) {
-            final Iterator<NotificationEventWithMetadata<NotificationEvent>> iterator = notificationQueue.getFutureOrInProcessingNotificationForSearchKey2(null, tenantRecordId).iterator();
-            try {
-                while (iterator.hasNext()) {
-                    final NotificationEventWithMetadata<NotificationEvent> notificationEvent = iterator.next();
-                    if (!notificationEvent.getEffectiveDate().isAfter(clock.getUTCNow())) {
-                        nbNotifications += 1;
-                    }
-                }
-            } finally {
-                // Go through all results to close the connection
-                while (iterator.hasNext()) {
-                    iterator.next();
+            for (final NotificationEventWithMetadata<NotificationEvent> notificationEvent : notificationQueue.getFutureOrInProcessingNotificationForSearchKey2(null, tenantRecordId)) {
+                if (!notificationEvent.getEffectiveDate().isAfter(clock.getUTCNow())) {
+                    nbNotifications += 1;
                 }
             }
         }
@@ -272,8 +294,7 @@ public class TestResource extends JaxRsResourceBase {
 
     private boolean areAllBusEventsProcessed(final Long tenantRecordId) {
         final Iterable<BusEventWithMetadata<BusEvent>> availableBusEventForSearchKey2 = persistentBus.getAvailableOrInProcessingBusEventsForSearchKey2(null, tenantRecordId);
-        // This will go through all results to close the connection
-        final int nbBusEvents = Iterables.size(availableBusEventForSearchKey2);
+        final int nbBusEvents = Iterables.<BusEventWithMetadata<BusEvent>>size(availableBusEventForSearchKey2);
         if (nbBusEvents != 0) {
             log.info("TestResource: at least {} more bus event(s) to process", nbBusEvents);
         }

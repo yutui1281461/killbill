@@ -6,7 +6,6 @@ andCheckSoftDeletionWithComma(prefix) ::= "and <prefix>is_active"
 
 tableFields(prefix) ::= <<
   <prefix>name
-, <prefix>applicable_object_types
 , <prefix>description
 , <prefix>is_active
 , <prefix>created_by
@@ -17,7 +16,6 @@ tableFields(prefix) ::= <<
 
 tableValues() ::= <<
   :name
-, :applicableObjectTypes
 , :description
 , :isActive
 , :createdBy
@@ -67,7 +65,6 @@ from <tableName()> t
 where t.is_active
 and <idField("t.")> in (<ids>)
 <AND_CHECK_TENANT("t.")>
-<defaultOrderBy("t.")>
 ;
 >>
 

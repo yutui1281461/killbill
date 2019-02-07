@@ -18,7 +18,6 @@
 package org.killbill.billing.entitlement.api;
 
 import org.killbill.billing.entitlement.DefaultEntitlementService;
-import org.killbill.billing.platform.api.KillbillService.KILLBILL_SERVICES;
 
 public abstract class EntitlementOrderingBase {
 
@@ -27,7 +26,7 @@ public abstract class EntitlementOrderingBase {
 
     protected static String getRealServiceNameForEntitlementOrExternalServiceName(final String originalServiceName, final SubscriptionEventType eventType) {
         final String serviceName;
-        if (KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName().equals(originalServiceName)) {
+        if (DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME.equals(originalServiceName)) {
             serviceName = getServiceName(eventType);
         } else {
             serviceName = originalServiceName;
@@ -48,7 +47,7 @@ public abstract class EntitlementOrderingBase {
                 return ENT_BILLING_SERVICE_NAME;
 
             default:
-                return KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName();
+                return DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME;
         }
     }
 }

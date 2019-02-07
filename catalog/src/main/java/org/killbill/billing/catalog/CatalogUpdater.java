@@ -1,6 +1,6 @@
 /*
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2016 Groupon, Inc
+ * Copyright 2016 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -18,6 +18,8 @@
 package org.killbill.billing.catalog;
 
 import java.math.BigDecimal;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.joda.time.DateTime;
 import org.killbill.billing.ErrorCode;
@@ -51,21 +53,30 @@ public class CatalogUpdater {
 
     public static String DEFAULT_CATALOG_NAME = "DEFAULT";
 
+    private static URI DEFAULT_URI;
+
+    static {
+        try {
+            DEFAULT_URI = new URI(DEFAULT_CATALOG_NAME);
+        } catch (URISyntaxException e) {
+        }
+    }
+
+    ;
+
     private final DefaultMutableStaticCatalog catalog;
 
     public CatalogUpdater(final StandaloneCatalog standaloneCatalog) {
         this.catalog = new DefaultMutableStaticCatalog(standaloneCatalog);
-        this.catalog.setRecurringBillingMode(BillingMode.IN_ADVANCE);
-
     }
 
-    public CatalogUpdater(final DateTime effectiveDate, final Currency... currencies) {
+    public CatalogUpdater(final BillingMode billingMode, final DateTime effectiveDate, final Currency... currencies) {
 
         final DefaultPriceList defaultPriceList = new DefaultPriceList().setName(PriceListSet.DEFAULT_PRICELIST_NAME);
         final StandaloneCatalog tmp = new StandaloneCatalog()
                 .setCatalogName(DEFAULT_CATALOG_NAME)
                 .setEffectiveDate(effectiveDate.toDate())
-                .setRecurringBillingMode(BillingMode.IN_ADVANCE)
+                .setRecurringBillingMode(billingMode)
                 .setProducts(ImmutableList.<Product>of())
                 .setPlans(ImmutableList.<Plan>of())
                 .setPriceLists(new DefaultPriceListSet(defaultPriceList, new DefaultPriceList[0]))
@@ -75,7 +86,7 @@ public class CatalogUpdater {
         } else {
             tmp.setSupportedCurrencies(new Currency[0]);
         }
-        tmp.initialize(tmp);
+        tmp.initialize(tmp, DEFAULT_URI);
 
         this.catalog = new DefaultMutableStaticCatalog(tmp);
     }
@@ -106,22 +117,21 @@ public class CatalogUpdater {
 
         validateNewPlanDescriptor(desc);
 
-        DefaultProduct product = plan != null ? (DefaultProduct) plan.getProduct() : (DefaultProduct) getExistingProduct(desc.getProductName());
+        DefaultProduct product = plan != null ? (DefaultProduct) plan.getProduct() : (DefaultProduct)  getExistingProduct(desc.getProductName());
         if (product == null) {
             product = new DefaultProduct();
             product.setName(desc.getProductName());
             product.setCatagory(desc.getProductCategory());
-            product.initialize(catalog);
+            product.initialize(catalog, DEFAULT_URI);
             catalog.addProduct(product);
         }
 
         if (plan == null) {
 
-            plan = new DefaultPlan(catalog);
+            plan = new DefaultPlan();
             plan.setName(desc.getPlanId());
             plan.setPriceListName(PriceListSet.DEFAULT_PRICELIST_NAME);
             plan.setProduct(product);
-            plan.setRecurringBillingMode(catalog.getRecurringBillingMode());
 
             if (desc.getTrialLength() > 0 && desc.getTrialTimeUnit() != TimeUnit.UNLIMITED) {
                 final DefaultPlanPhase trialPhase = new DefaultPlanPhase();
@@ -184,7 +194,7 @@ public class CatalogUpdater {
         }
 
         // Reinit catalog
-        catalog.initialize(catalog);
+        catalog.initialize(catalog, DEFAULT_URI);
     }
 
     private boolean isPriceForCurrencyExists(final InternationalPrice price, final Currency currency) {
@@ -269,10 +279,10 @@ public class CatalogUpdater {
     }
 
     private void validateNewPlanDescriptor(final SimplePlanDescriptor desc) throws CatalogApiException {
-        final boolean invalidPlan = desc.getPlanId() == null && (desc.getProductCategory() == null || desc.getBillingPeriod() == null);
-        final boolean invalidPrice = (desc.getAmount() == null || desc.getAmount().compareTo(BigDecimal.ZERO) < 0) ||
-                                     desc.getCurrency() == null;
-        if (invalidPlan || invalidPrice) {
+        if (desc.getProductCategory() == null ||
+            desc.getBillingPeriod() == null ||
+            (desc.getAmount() == null || desc.getAmount().compareTo(BigDecimal.ZERO) < 0) ||
+            desc.getCurrency() == null) {
             throw new CatalogApiException(ErrorCode.CAT_INVALID_SIMPLE_PLAN_DESCRIPTOR, desc);
         }
 

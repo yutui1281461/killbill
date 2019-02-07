@@ -1,9 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
  *
- * The Billing Project licenses this file to you under the Apache License, version 2.0
+ * Ning licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
  * License.  You may obtain a copy of the License at:
  *
@@ -30,13 +28,11 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 
 import org.killbill.billing.account.api.AccountUserApi;
 import org.killbill.billing.jaxrs.util.Context;
 import org.killbill.billing.jaxrs.util.JaxrsUriBuilder;
-import org.killbill.billing.payment.api.InvoicePaymentApi;
 import org.killbill.billing.payment.api.PaymentApi;
 import org.killbill.billing.util.api.AuditUserApi;
 import org.killbill.billing.util.api.CustomFieldUserApi;
@@ -52,11 +48,11 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 
-import static javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 
 @Singleton
 @Path(JaxrsResource.EXPORT_PATH)
-@Api(value = JaxrsResource.EXPORT_PATH, description = "Export endpoints", tags="Export")
+@Api(value = JaxrsResource.EXPORT_PATH, description = "Export endpoints")
 public class ExportResource extends JaxRsResourceBase {
 
     private final ExportUserApi exportUserApi;
@@ -69,32 +65,30 @@ public class ExportResource extends JaxRsResourceBase {
                           final AuditUserApi auditUserApi,
                           final AccountUserApi accountUserApi,
                           final PaymentApi paymentApi,
-                          final InvoicePaymentApi invoicePaymentApi,
                           final Clock clock,
                           final Context context) {
-        super(uriBuilder, tagUserApi, customFieldUserApi, auditUserApi, accountUserApi, paymentApi, invoicePaymentApi, null, clock, context);
+        super(uriBuilder, tagUserApi, customFieldUserApi, auditUserApi, accountUserApi, paymentApi, null, clock, context);
         this.exportUserApi = exportUserApi;
     }
 
     @TimedResource
     @GET
     @Path("/{accountId:" + UUID_PATTERN + "}")
-    @Produces(APPLICATION_OCTET_STREAM)
-    @ApiOperation(value = "Export account data", response = Response.class)
-    @ApiResponses(value = {@ApiResponse(code = 200, message = "Success"),
-                           @ApiResponse(code = 400, message = "Invalid account id supplied"),
+    @Produces(TEXT_PLAIN)
+    @ApiOperation(value = "Export account data", response = String.class)
+    @ApiResponses(value = {@ApiResponse(code = 400, message = "Invalid account id supplied"),
                            @ApiResponse(code = 404, message = "Account not found")})
-    public StreamingOutput exportDataForAccount(@PathParam("accountId") final UUID accountId,
+    public StreamingOutput exportDataForAccount(@PathParam("accountId") final String accountId,
                                                 @HeaderParam(HDR_CREATED_BY) final String createdBy,
                                                 @HeaderParam(HDR_REASON) final String reason,
                                                 @HeaderParam(HDR_COMMENT) final String comment,
                                                 @javax.ws.rs.core.Context final HttpServletRequest request) {
-        final CallContext callContext = context.createCallContextWithAccountId(accountId, createdBy, reason, comment, request);
+        final CallContext callContext = context.createContext(createdBy, reason, comment, request);
         return new StreamingOutput() {
             @Override
             public void write(final OutputStream output) throws IOException, WebApplicationException {
                 // CSV by default for now
-                exportUserApi.exportDataAsCSVForAccount(accountId, output, callContext);
+                exportUserApi.exportDataAsCSVForAccount(UUID.fromString(accountId), output, callContext);
             }
         };
     }

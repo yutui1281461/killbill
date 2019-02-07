@@ -18,6 +18,7 @@
 package org.killbill.billing.payment.core.janitor;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 import org.killbill.billing.account.api.Account;
@@ -26,13 +27,7 @@ import org.killbill.billing.payment.PaymentTestSuiteWithEmbeddedDB;
 import org.killbill.billing.payment.api.Payment;
 import org.killbill.billing.payment.api.PaymentApiException;
 import org.killbill.billing.payment.api.PluginProperty;
-import org.killbill.billing.payment.api.TransactionStatus;
-import org.killbill.billing.payment.api.TransactionType;
-import org.killbill.billing.payment.dao.PaymentModelDao;
-import org.killbill.billing.payment.dao.PaymentTransactionModelDao;
 import org.killbill.billing.payment.plugin.api.PaymentPluginStatus;
-import org.killbill.billing.payment.plugin.api.PaymentTransactionInfoPlugin;
-import org.killbill.billing.payment.provider.DefaultNoOpPaymentInfoPlugin;
 import org.killbill.billing.payment.provider.MockPaymentProviderPlugin;
 import org.killbill.billing.util.globallocker.LockerType;
 import org.killbill.commons.locker.GlobalLock;
@@ -54,9 +49,6 @@ public class TestIncompletePaymentTransactionTaskWithDB extends PaymentTestSuite
 
     @BeforeClass(groups = "slow")
     protected void beforeClass() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
         super.beforeClass();
 
         mockPaymentProviderPlugin = (MockPaymentProviderPlugin) registry.getServiceForName(MockPaymentProviderPlugin.PLUGIN_NAME);
@@ -64,10 +56,6 @@ public class TestIncompletePaymentTransactionTaskWithDB extends PaymentTestSuite
 
     @BeforeMethod(groups = "slow")
     public void beforeMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         super.beforeMethod();
 
         mockPaymentProviderPlugin.clear();
@@ -81,7 +69,6 @@ public class TestIncompletePaymentTransactionTaskWithDB extends PaymentTestSuite
                                                           null,
                                                           BigDecimal.TEN,
                                                           Currency.EUR,
-                                                          null,
                                                           UUID.randomUUID().toString(),
                                                           UUID.randomUUID().toString(),
                                                           ImmutableList.<PluginProperty>of(new PluginProperty(MockPaymentProviderPlugin.PLUGIN_PROPERTY_PAYMENT_PLUGIN_STATUS_OVERRIDE, PaymentPluginStatus.PENDING.toString(), false)),
@@ -91,7 +78,7 @@ public class TestIncompletePaymentTransactionTaskWithDB extends PaymentTestSuite
         final JanitorNotificationKey notificationKey = new JanitorNotificationKey(transactionId, incompletePaymentTransactionTask.getClass().toString(), 1);
         final UUID userToken = UUID.randomUUID();
 
-        Assert.assertTrue(Iterables.isEmpty(incompletePaymentTransactionTask.janitorQueue.getFutureNotificationForSearchKeys(internalCallContext.getAccountRecordId(), internalCallContext.getTenantRecordId())));
+        Assert.assertTrue(Iterables.<NotificationEventWithMetadata<NotificationEvent>>isEmpty(incompletePaymentTransactionTask.janitorQueue.getFutureNotificationForSearchKeys(internalCallContext.getAccountRecordId(), internalCallContext.getTenantRecordId())));
 
         GlobalLock lock = null;
         try {
@@ -100,7 +87,7 @@ public class TestIncompletePaymentTransactionTaskWithDB extends PaymentTestSuite
             incompletePaymentTransactionTask.processNotification(notificationKey, userToken, internalCallContext.getAccountRecordId(), internalCallContext.getTenantRecordId());
 
             final Iterable<NotificationEventWithMetadata<NotificationEvent>> futureNotifications = incompletePaymentTransactionTask.janitorQueue.getFutureNotificationForSearchKeys(internalCallContext.getAccountRecordId(), internalCallContext.getTenantRecordId());
-            Assert.assertFalse(Iterables.isEmpty(futureNotifications));
+            Assert.assertFalse(Iterables.<NotificationEventWithMetadata<NotificationEvent>>isEmpty(futureNotifications));
             final NotificationEventWithMetadata<NotificationEvent> notificationEventWithMetadata = ImmutableList.<NotificationEventWithMetadata<NotificationEvent>>copyOf(futureNotifications).get(0);
             Assert.assertEquals(notificationEventWithMetadata.getUserToken(), userToken);
             Assert.assertEquals(notificationEventWithMetadata.getEvent().getClass(), JanitorNotificationKey.class);
@@ -117,72 +104,5 @@ public class TestIncompletePaymentTransactionTaskWithDB extends PaymentTestSuite
                 lock.release();
             }
         }
-    }
-
-    @Test(groups = "slow", description = "https://github.com/killbill/killbill/issues/809")
-    public void testUpdateWithinLock() throws PaymentApiException {
-        final Payment payment = paymentApi.createAuthorization(account,
-                                                          account.getPaymentMethodId(),
-                                                          null,
-                                                          BigDecimal.TEN,
-                                                          Currency.EUR,
-                                                          null,
-                                                          UUID.randomUUID().toString(),
-                                                          UUID.randomUUID().toString(),
-                                                          ImmutableList.<PluginProperty>of(new PluginProperty(MockPaymentProviderPlugin.PLUGIN_PROPERTY_PAYMENT_PLUGIN_STATUS_OVERRIDE, PaymentPluginStatus.UNDEFINED.toString(), false)),
-                                                          callContext);
-        final PaymentModelDao paymentModel = paymentDao.getPayment(payment.getId(), internalCallContext);
-        final UUID transactionId = payment.getTransactions().get(0).getId();
-        final PaymentTransactionModelDao transactionModel = paymentDao.getPaymentTransaction(transactionId, internalCallContext);
-
-        Assert.assertEquals(paymentModel.getStateName(), "AUTH_ERRORED");
-        Assert.assertEquals(transactionModel.getTransactionStatus().toString(), "UNKNOWN");
-
-        paymentDao.updatePaymentAndTransactionOnCompletion(
-                account.getId(),
-                null,
-                payment.getId(),
-                TransactionType.AUTHORIZE,
-                "AUTH_SUCCESS",
-                "AUTH_SUCCESS",
-                transactionId,
-                TransactionStatus.SUCCESS,
-                BigDecimal.TEN,
-                Currency.EUR,
-                "200",
-                "Ok",
-                internalCallContext);
-
-        paymentApi.createCapture(account,
-                                 payment.getId(),
-                                 BigDecimal.TEN,
-                                 Currency.EUR,
-                                 null,
-                                 UUID.randomUUID().toString(),
-                                 ImmutableList.<PluginProperty>of(new PluginProperty(MockPaymentProviderPlugin.PLUGIN_PROPERTY_PAYMENT_PLUGIN_STATUS_OVERRIDE, PaymentPluginStatus.PROCESSED.toString(), false)),
-                                 callContext);
-
-        final PaymentModelDao paymentAfterCapture = paymentDao.getPayment(payment.getId(), internalCallContext);
-        Assert.assertEquals(paymentAfterCapture.getStateName(), "CAPTURE_SUCCESS");
-
-        PaymentTransactionInfoPlugin paymentTransactionInfoPlugin = new DefaultNoOpPaymentInfoPlugin(
-                payment.getId(),
-                transactionId,
-                TransactionType.AUTHORIZE,
-                BigDecimal.TEN,
-                Currency.EUR,
-                transactionModel.getEffectiveDate(),
-                transactionModel.getCreatedDate(),
-                PaymentPluginStatus.PROCESSED,
-                "200",
-                "OK");
-        incompletePaymentTransactionTask.updatePaymentAndTransactionIfNeededWithAccountLock(
-                paymentModel,
-                transactionModel,
-                paymentTransactionInfoPlugin,
-                internalCallContext);
-
-        final PaymentModelDao paymentAfterJanitor = paymentDao.getPayment(payment.getId(), internalCallContext);
-        Assert.assertEquals(paymentAfterJanitor.getStateName(), "CAPTURE_SUCCESS");
     }
 }

@@ -27,6 +27,7 @@ import org.killbill.billing.platform.api.LifecycleHandlerType.LifecycleLevel;
 
 public class DefaultSecurityService implements SecurityService {
 
+    public static final String SECURITY_SERVICE_NAME = "security-service";
 
     private final SecurityManager securityManager;
 
@@ -37,12 +38,7 @@ public class DefaultSecurityService implements SecurityService {
 
     @Override
     public String getName() {
-        return KILLBILL_SERVICES.SECURITY_SERVICE.getServiceName();
-    }
-
-    @Override
-    public int getRegistrationOrdering() {
-        return KILLBILL_SERVICES.SECURITY_SERVICE.getRegistrationOrdering();
+        return SECURITY_SERVICE_NAME;
     }
 
     @LifecycleHandlerType(LifecycleHandlerType.LifecycleLevel.INIT_SERVICE)

@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2017 Groupon, Inc
+ * Copyright 2014-2017 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -33,11 +33,13 @@ import javax.inject.Inject;
 
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
+import org.killbill.billing.account.api.AccountApiException;
 import org.killbill.billing.account.api.AccountInternalApi;
 import org.killbill.billing.callcontext.InternalCallContext;
 import org.killbill.billing.catalog.api.BillingActionPolicy;
 import org.killbill.billing.entitlement.DefaultEntitlementService;
 import org.killbill.billing.entitlement.EntitlementInternalApi;
+import org.killbill.billing.entitlement.EntitlementService;
 import org.killbill.billing.entitlement.api.BaseEntitlementWithAddOnsSpecifier;
 import org.killbill.billing.entitlement.api.BlockingState;
 import org.killbill.billing.entitlement.api.BlockingStateType;
@@ -59,7 +61,6 @@ import org.killbill.billing.entitlement.plugin.api.EntitlementContext;
 import org.killbill.billing.entitlement.plugin.api.OperationType;
 import org.killbill.billing.junction.DefaultBlockingState;
 import org.killbill.billing.payment.api.PluginProperty;
-import org.killbill.billing.platform.api.KillbillService.KILLBILL_SERVICES;
 import org.killbill.billing.security.api.SecurityApi;
 import org.killbill.billing.subscription.api.SubscriptionBase;
 import org.killbill.billing.subscription.api.SubscriptionBaseInternalApi;
@@ -74,6 +75,7 @@ import org.killbill.notificationq.api.NotificationQueueService;
 import org.killbill.notificationq.api.NotificationQueueService.NoSuchNotificationQueue;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 
 public class DefaultEntitlementInternalApi extends DefaultEntitlementApiBase implements EntitlementInternalApi {
@@ -98,6 +100,14 @@ public class DefaultEntitlementInternalApi extends DefaultEntitlementApiBase imp
         if (!entitlements.iterator().hasNext()) {
             return;
         }
+
+        int bcd;
+        try {
+            bcd = accountApi.getBCD(entitlements.iterator().next().getAccountId(), internalCallContext);
+        } catch (final AccountApiException e) {
+            throw new EntitlementApiException(e);
+        }
+        Preconditions.checkState(bcd > 0, "Unexpected condition where account info could not be retrieved");
 
         final CallContext callContext = internalCallContextFactory.createCallContext(internalCallContext);
 
@@ -144,6 +154,7 @@ public class DefaultEntitlementInternalApi extends DefaultEntitlementApiBase imp
 
         final Callable<Void> preCallbacksCallback = new BulkSubscriptionBaseCancellation(subscriptions,
                                                                                          billingPolicy,
+                                                                                         bcd,
                                                                                          internalCallContext);
 
         pluginExecution.executeWithPlugin(preCallbacksCallback, callbacks, pluginContexts);
@@ -161,7 +172,7 @@ public class DefaultEntitlementInternalApi extends DefaultEntitlementApiBase imp
                                           final NotificationEvent notificationEvent,
                                           final InternalCallContext context) {
         try {
-            final NotificationQueue subscriptionEventQueue = notificationQueueService.getNotificationQueue(KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName(),
+            final NotificationQueue subscriptionEventQueue = notificationQueueService.getNotificationQueue(DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME,
                                                                                                            DefaultEntitlementService.NOTIFICATION_QUEUE_NAME);
             subscriptionEventQueue.recordFutureNotification(effectiveDate, notificationEvent, context.getUserToken(), context.getAccountRecordId(), context.getTenantRecordId());
         } catch (final NoSuchNotificationQueue e) {
@@ -175,20 +186,23 @@ public class DefaultEntitlementInternalApi extends DefaultEntitlementApiBase imp
 
         private final Iterable<SubscriptionBase> subscriptions;
         private final BillingActionPolicy billingPolicy;
+        private final int accountBillCycleDayLocal;
         private final InternalCallContext callContext;
 
         public BulkSubscriptionBaseCancellation(final Iterable<SubscriptionBase> subscriptions,
                                                 final BillingActionPolicy billingPolicy,
+                                                final int accountBillCycleDayLocal,
                                                 final InternalCallContext callContext) {
             this.subscriptions = subscriptions;
             this.billingPolicy = billingPolicy;
+            this.accountBillCycleDayLocal = accountBillCycleDayLocal;
             this.callContext = callContext;
         }
 
         @Override
         public Void call() throws Exception {
             try {
-                subscriptionInternalApi.cancelBaseSubscriptions(subscriptions, billingPolicy, callContext);
+                subscriptionInternalApi.cancelBaseSubscriptions(subscriptions, billingPolicy, accountBillCycleDayLocal, callContext);
             } catch (final SubscriptionBaseApiException e) {
                 throw new EntitlementApiException(e);
             }
@@ -220,7 +234,8 @@ public class DefaultEntitlementInternalApi extends DefaultEntitlementApiBase imp
 
         @Override
         public Entitlement doCall(final EntitlementApi entitlementApi, final EntitlementContext updatedPluginContext) throws EntitlementApiException {
-            DateTime effectiveDate = dateHelper.fromLocalDateAndReferenceTime(updatedPluginContext.getBaseEntitlementWithAddOnsSpecifiers().iterator().next().getEntitlementEffectiveDate(), updatedPluginContext.getCreatedDate(), internalCallContext);
+            final DateTime now = clock.getUTCNow();
+            DateTime effectiveDate = dateHelper.fromLocalDateAndReferenceTime(updatedPluginContext.getBaseEntitlementWithAddOnsSpecifiers().iterator().next().getEntitlementEffectiveDate(), now, internalCallContext);
 
             //
             // If the entitlementDate provided is ahead we default to the effective subscriptionBase cancellationDate to avoid weird timing issues.
@@ -236,7 +251,7 @@ public class DefaultEntitlementInternalApi extends DefaultEntitlementApiBase imp
                 effectiveDate = subscriptionBaseCancellationDate;
             }
 
-            final BlockingState newBlockingState = new DefaultBlockingState(entitlement.getId(), BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_CANCELLED, KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName(), true, true, false, effectiveDate);
+            final BlockingState newBlockingState = new DefaultBlockingState(entitlement.getId(), BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_CANCELLED, EntitlementService.ENTITLEMENT_SERVICE_NAME, true, true, false, effectiveDate);
             final Collection<NotificationEvent> notificationEvents = new ArrayList<NotificationEvent>();
             final Collection<BlockingState> addOnsBlockingStates = entitlement.computeAddOnBlockingStates(effectiveDate, notificationEvents, callContext, internalCallContext);
 

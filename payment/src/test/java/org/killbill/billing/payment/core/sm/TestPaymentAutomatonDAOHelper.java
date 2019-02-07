@@ -127,7 +127,6 @@ public class TestPaymentAutomatonDAOHelper extends PaymentTestSuiteWithEmbeddedD
                                                       currency,
                                                       null,
                                                       null,
-                                                      null,
                                                       false,
                                                       null,
                                                       ImmutableList.<PluginProperty>of(),

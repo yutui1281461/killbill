@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014 Groupon, Inc
+ * Copyright 2014 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -18,7 +18,6 @@
 
 package org.killbill.billing.junction;
 
-import java.util.Map;
 import java.util.UUID;
 
 import org.joda.time.DateTime;
@@ -94,26 +93,18 @@ public abstract class JunctionTestSuiteWithEmbeddedDB extends GuicyKillbillTestS
     protected Catalog catalog;
 
     @Override
-    protected KillbillConfigSource getConfigSource(final Map<String, String> extraProperties) {
-        return getConfigSource("/junction.properties", extraProperties);
+    protected KillbillConfigSource getConfigSource() {
+        return getConfigSource("/junction.properties");
     }
 
     @BeforeClass(groups = "slow")
     protected void beforeClass() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
-        final Injector injector = Guice.createInjector(Stage.PRODUCTION, new TestJunctionModuleWithEmbeddedDB(configSource, clock));
+        final Injector injector = Guice.createInjector(Stage.PRODUCTION, new TestJunctionModuleWithEmbeddedDB(configSource));
         injector.injectMembers(this);
     }
 
     @BeforeMethod(groups = "slow")
     public void beforeMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         super.beforeMethod();
         startTestFamework();
         this.catalog = initCatalog(catalogService);
@@ -121,10 +112,6 @@ public abstract class JunctionTestSuiteWithEmbeddedDB extends GuicyKillbillTestS
 
     @AfterMethod(groups = "slow")
     public void afterMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         stopTestFramework();
     }
 
@@ -209,6 +196,7 @@ public abstract class JunctionTestSuiteWithEmbeddedDB extends GuicyKillbillTestS
                                        .email(UUID.randomUUID().toString().substring(1, 8))
                                        .phone(UUID.randomUUID().toString().substring(1, 8))
                                        .migrated(false)
+                                       .isNotifiedForInvoices(false)
                                        .externalKey(UUID.randomUUID().toString().substring(1, 8))
                                        .billingCycleDayLocal(billingDay)
                                        .currency(Currency.USD)

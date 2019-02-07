@@ -31,7 +31,6 @@ import org.killbill.billing.entitlement.api.BlockingState;
 import org.killbill.billing.entitlement.api.BlockingStateType;
 import org.killbill.billing.entitlement.api.DefaultEntitlementApi;
 import org.killbill.billing.entitlement.dao.BlockingStateDao;
-import org.killbill.billing.platform.api.KillbillService.KILLBILL_SERVICES;
 import org.killbill.billing.subscription.api.SubscriptionBaseInternalApi;
 import org.killbill.billing.subscription.api.user.SubscriptionBaseApiException;
 import org.killbill.notificationq.api.NotificationQueueService;
@@ -79,7 +78,7 @@ public class EntitlementUtils {
         // We only need the bundle id in case of subscriptions (at the account level, we don't need it and at the bundle level, we already have it)
         if (state.getType() == BlockingStateType.SUBSCRIPTION) {
             try {
-                bundleId = subscriptionBaseInternalApi.getBundleIdFromSubscriptionId(state.getBlockedId(), context);
+                bundleId = subscriptionBaseInternalApi.getSubscriptionFromId(state.getBlockedId(), context).getBundleId();
             } catch (final SubscriptionBaseApiException e) {
                 throw new RuntimeException(e);
             }
@@ -98,7 +97,7 @@ public class EntitlementUtils {
         return Iterables.tryFind(nonAddonUUIDs, new Predicate<UUID>() {
             @Override
             public boolean apply(final UUID input) {
-                final BlockingState state = dao.getBlockingStateForService(input, BlockingStateType.SUBSCRIPTION, KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName(), tenantContext);
+                final BlockingState state = dao.getBlockingStateForService(input, BlockingStateType.SUBSCRIPTION, DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME, tenantContext);
                 return (state == null || !state.getStateName().equals(DefaultEntitlementApi.ENT_STATE_CANCELLED));
             }
         }).orNull();

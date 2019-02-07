@@ -106,7 +106,6 @@ public class TestApiListener {
         CREATE,
         TRANSFER,
         CHANGE,
-        UNDO_CHANGE,
         CANCEL,
         UNCANCEL,
         PAUSE,
@@ -163,10 +162,6 @@ public class TestApiListener {
                 break;
             case CHANGE:
                 assertEqualsNicely(NextEvent.CHANGE);
-                notifyIfStackEmpty();
-                break;
-            case UNDO_CHANGE:
-                assertEqualsNicely(NextEvent.UNDO_CHANGE);
                 notifyIfStackEmpty();
                 break;
             case UNCANCEL:
@@ -294,7 +289,7 @@ public class TestApiListener {
         }
     }
 
-    private boolean isCompleted(final long timeout) {
+    public boolean isCompleted(final long timeout) {
         synchronized (this) {
             long waitTimeMs = timeout;
             do {
@@ -324,12 +319,8 @@ public class TestApiListener {
                 } catch (final Exception ignore) {
                     // Rerun one more time to provide details
                     final long pending = idbi.withHandle(new PendingBusOrNotificationCallback(clock));
-                    if (pending != 0) {
-                        log.error("isCompleted : Received all events but found remaining unprocessed bus events/notifications = {}", pending);
-                        return false;
-                    } else {
-                        return completed;
-                    }
+                    log.error("isCompleted : Received all events but found remaining unprocessed bus events/notifications =  {}", pending);
+                    return false;
                 }
             } while (waitTimeMs > 0 && !completed);
         }

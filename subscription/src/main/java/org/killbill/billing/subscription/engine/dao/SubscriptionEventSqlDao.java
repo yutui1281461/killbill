@@ -1,9 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
  *
- * The Billing Project licenses this file to you under the Apache License, version 2.0
+ * Ning licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
  * License.  You may obtain a copy of the License at:
  *
@@ -28,9 +26,9 @@ import org.killbill.billing.subscription.events.SubscriptionBaseEvent;
 import org.killbill.billing.util.audit.ChangeType;
 import org.killbill.billing.util.entity.dao.Audited;
 import org.killbill.billing.util.entity.dao.EntitySqlDao;
-import org.killbill.commons.jdbi.binder.SmartBindBean;
 import org.killbill.commons.jdbi.template.KillBillSqlDaoStringTemplate;
 import org.skife.jdbi.v2.sqlobject.Bind;
+import org.killbill.commons.jdbi.binder.SmartBindBean;
 import org.skife.jdbi.v2.sqlobject.SqlQuery;
 import org.skife.jdbi.v2.sqlobject.SqlUpdate;
 
@@ -55,4 +53,7 @@ public interface SubscriptionEventSqlDao extends EntitySqlDao<SubscriptionEventM
     @SqlQuery
     public List<SubscriptionEventModelDao> getActiveEventsForSubscription(@Bind("subscriptionId") String subscriptionId,
                                                                           @SmartBindBean final InternalTenantContext context);
+
+    @SqlQuery
+    public List<SubscriptionEventModelDao> getFutureActiveEventsForAccount(@Bind("now") Date now, @SmartBindBean final InternalTenantContext context);
 }

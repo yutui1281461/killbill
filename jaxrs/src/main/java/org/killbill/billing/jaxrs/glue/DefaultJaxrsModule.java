@@ -41,5 +41,4 @@ public class DefaultJaxrsModule extends KillBillModule {
         bind(JaxrsExecutors.class).asEagerSingleton();
         bind(JaxrsService.class).to(DefaultJaxrsService.class).asEagerSingleton();
     }
-
 }

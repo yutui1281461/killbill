@@ -153,38 +153,27 @@ public class OverdueListener {
     private void insertBusEventIntoNotificationQueue(final UUID accountId, final OverdueAsyncBusNotificationAction action, final InternalCallContext callContext) {
         final boolean shouldInsertNotification = shouldInsertNotification(callContext);
 
-        if (!shouldInsertNotification) {
-            log.debug("OverdueListener: shouldInsertNotification=false");
-            return;
-        }
+        if (shouldInsertNotification) {
+            OverdueAsyncBusNotificationKey notificationKey = new OverdueAsyncBusNotificationKey(accountId, action);
+            asyncPoster.insertOverdueNotification(accountId, clock.getUTCNow(), OverdueAsyncBusNotifier.OVERDUE_ASYNC_BUS_NOTIFIER_QUEUE, notificationKey, callContext);
 
-        OverdueAsyncBusNotificationKey notificationKey = new OverdueAsyncBusNotificationKey(accountId, action);
-        asyncPoster.insertOverdueNotification(accountId, callContext.getCreatedDate(), OverdueAsyncBusNotifier.OVERDUE_ASYNC_BUS_NOTIFIER_QUEUE, notificationKey, callContext);
+            try {
+                final List<Account> childrenAccounts = accountApi.getChildrenAccounts(accountId, callContext);
+                if (childrenAccounts != null) {
+                    for (Account childAccount : childrenAccounts) {
 
-        try {
-            // Refresh parent
-            final Account account = accountApi.getAccountById(accountId, callContext);
-            if (account.getParentAccountId() != null && account.isPaymentDelegatedToParent()) {
-                final InternalTenantContext parentAccountInternalTenantContext = internalCallContextFactory.createInternalTenantContext(account.getParentAccountId(), callContext);
-                final InternalCallContext parentAccountContext = internalCallContextFactory.createInternalCallContext(parentAccountInternalTenantContext.getAccountRecordId(), callContext);
-                notificationKey = new OverdueAsyncBusNotificationKey(account.getParentAccountId(), action);
-                asyncPoster.insertOverdueNotification(account.getParentAccountId(), callContext.getCreatedDate(), OverdueAsyncBusNotifier.OVERDUE_ASYNC_BUS_NOTIFIER_QUEUE, notificationKey, parentAccountContext);
-            }
-
-            // Refresh children
-            final List<Account> childrenAccounts = accountApi.getChildrenAccounts(accountId, callContext);
-            if (childrenAccounts != null) {
-                for (final Account childAccount : childrenAccounts) {
-                    if (childAccount.isPaymentDelegatedToParent()) {
-                        final InternalTenantContext internalTenantContext = internalCallContextFactory.createInternalTenantContext(childAccount.getId(), callContext);
-                        final InternalCallContext accountContext = internalCallContextFactory.createInternalCallContext(internalTenantContext.getAccountRecordId(), callContext);
-                        notificationKey = new OverdueAsyncBusNotificationKey(childAccount.getId(), action);
-                        asyncPoster.insertOverdueNotification(childAccount.getId(), callContext.getCreatedDate(), OverdueAsyncBusNotifier.OVERDUE_ASYNC_BUS_NOTIFIER_QUEUE, notificationKey, accountContext);
+                        if (childAccount.isPaymentDelegatedToParent()) {
+                            final InternalTenantContext internalTenantContext = internalCallContextFactory.createInternalTenantContext(childAccount.getId(), callContext);
+                            final InternalCallContext accountContext = internalCallContextFactory.createInternalCallContext(internalTenantContext.getAccountRecordId(), callContext);
+                            notificationKey = new OverdueAsyncBusNotificationKey(childAccount.getId(), action);
+                            asyncPoster.insertOverdueNotification(childAccount.getId(), clock.getUTCNow(), OverdueAsyncBusNotifier.OVERDUE_ASYNC_BUS_NOTIFIER_QUEUE, notificationKey, accountContext);
+                        }
                     }
                 }
+            } catch (Exception e) {
+                log.error("Error loading child accounts from account " + accountId);
             }
-        } catch (final Exception e) {
-            log.error("Error loading child accounts from accountId='{}'", accountId);
+
         }
     }
 
@@ -194,7 +183,7 @@ public class OverdueListener {
         try {
             overdueConfig = overdueConfigCache.getOverdueConfig(internalTenantContext);
         } catch (final OverdueApiException e) {
-            log.warn("Failed to extract overdue config for tenantRecordId='{}'", internalTenantContext.getTenantRecordId());
+            log.warn("Failed to extract overdue config for tenant " + internalTenantContext.getTenantRecordId());
             overdueConfig = null;
         }
         if (overdueConfig == null || overdueConfig.getOverdueStatesAccount() == null || overdueConfig.getOverdueStatesAccount().getStates() == null) {
@@ -208,4 +197,5 @@ public class OverdueListener {
         }
         return false;
     }
+
 }

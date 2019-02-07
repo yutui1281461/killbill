@@ -42,6 +42,7 @@ public class DefaultBroadcastService implements BroadcastService {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultBroadcastService.class);
 
+    public static final String BROADCAST_SERVICE_NAME = "broadcast-service";
 
     private final BroadcastConfig broadcastConfig;
     private final BroadcastDao broadcastDao;
@@ -61,12 +62,7 @@ public class DefaultBroadcastService implements BroadcastService {
 
     @Override
     public String getName() {
-        return KILLBILL_SERVICES.BROADCAST_SERVICE.getServiceName();
-    }
-
-    @Override
-    public int getRegistrationOrdering() {
-        return KILLBILL_SERVICES.BROADCAST_SERVICE.getRegistrationOrdering();
+        return BROADCAST_SERVICE_NAME;
     }
 
     @LifecycleHandlerType(LifecycleLevel.INIT_SERVICE)

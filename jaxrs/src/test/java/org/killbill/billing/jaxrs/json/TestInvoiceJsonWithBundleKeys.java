@@ -1,9 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
  *
- * The Billing Project licenses this file to you under the Apache License, version 2.0
+ * Ning licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
  * License.  You may obtain a copy of the License at:
  *
@@ -43,20 +41,20 @@ public class TestInvoiceJsonWithBundleKeys extends JaxrsTestSuiteNoDB {
         final BigDecimal amount = BigDecimal.TEN;
         final BigDecimal creditAdj = BigDecimal.ONE;
         final BigDecimal refundAdj = BigDecimal.ONE;
-        final UUID invoiceId = UUID.randomUUID();
+        final String invoiceId = UUID.randomUUID().toString();
         final LocalDate invoiceDate = clock.getUTCToday();
         final LocalDate targetDate = clock.getUTCToday();
         final String invoiceNumber = UUID.randomUUID().toString();
         final BigDecimal balance = BigDecimal.ZERO;
-        final UUID accountId = UUID.randomUUID();
+        final String accountId = UUID.randomUUID().toString();
         final String bundleKeys = UUID.randomUUID().toString();
         final CreditJson creditJson = createCreditJson();
         final List<CreditJson> credits = ImmutableList.<CreditJson>of(creditJson);
         final List<AuditLogJson> auditLogs = createAuditLogsJson(clock.getUTCNow());
-        final InvoiceJson invoiceJsonSimple = new InvoiceJson(amount, Currency.USD, InvoiceStatus.COMMITTED,
+        final InvoiceJson invoiceJsonSimple = new InvoiceJson(amount, Currency.USD.toString(), InvoiceStatus.COMMITTED.toString(),
                                                               creditAdj, refundAdj, invoiceId, invoiceDate,
                                                               targetDate, invoiceNumber, balance, accountId, bundleKeys,
-                                                              credits, null, false, null, null, auditLogs);
+                                                              credits, null, false, auditLogs);
         Assert.assertEquals(invoiceJsonSimple.getAmount(), amount);
         Assert.assertEquals(invoiceJsonSimple.getCreditAdj(), creditAdj);
         Assert.assertEquals(invoiceJsonSimple.getRefundAdj(), refundAdj);
@@ -69,7 +67,7 @@ public class TestInvoiceJsonWithBundleKeys extends JaxrsTestSuiteNoDB {
         Assert.assertEquals(invoiceJsonSimple.getBundleKeys(), bundleKeys);
         Assert.assertEquals(invoiceJsonSimple.getCredits(), credits);
         Assert.assertEquals(invoiceJsonSimple.getAuditLogs(), auditLogs);
-        Assert.assertEquals(invoiceJsonSimple.getStatus(), InvoiceStatus.COMMITTED);
+        Assert.assertEquals(invoiceJsonSimple.getStatus(), InvoiceStatus.COMMITTED.toString());
         Assert.assertFalse(invoiceJsonSimple.getIsParentInvoice());
 
         final String asJson = mapper.writeValueAsString(invoiceJsonSimple);
@@ -84,9 +82,8 @@ public class TestInvoiceJsonWithBundleKeys extends JaxrsTestSuiteNoDB {
         Mockito.when(invoice.getCreditedAmount()).thenReturn(BigDecimal.ONE);
         Mockito.when(invoice.getRefundedAmount()).thenReturn(BigDecimal.ONE);
         Mockito.when(invoice.getId()).thenReturn(UUID.randomUUID());
-        final LocalDate utcToday = clock.getUTCToday();
-        Mockito.when(invoice.getInvoiceDate()).thenReturn(utcToday);
-        Mockito.when(invoice.getTargetDate()).thenReturn(utcToday);
+        Mockito.when(invoice.getInvoiceDate()).thenReturn(clock.getUTCToday());
+        Mockito.when(invoice.getTargetDate()).thenReturn(clock.getUTCToday());
         Mockito.when(invoice.getInvoiceNumber()).thenReturn(Integer.MAX_VALUE);
         Mockito.when(invoice.getBalance()).thenReturn(BigDecimal.ZERO);
         Mockito.when(invoice.getAccountId()).thenReturn(UUID.randomUUID());
@@ -101,26 +98,25 @@ public class TestInvoiceJsonWithBundleKeys extends JaxrsTestSuiteNoDB {
         Assert.assertEquals(invoiceJson.getAmount(), invoice.getChargedAmount());
         Assert.assertEquals(invoiceJson.getCreditAdj(), invoice.getCreditedAmount());
         Assert.assertEquals(invoiceJson.getRefundAdj(), invoice.getRefundedAmount());
-        Assert.assertEquals(invoiceJson.getInvoiceId(), invoice.getId());
+        Assert.assertEquals(invoiceJson.getInvoiceId(), invoice.getId().toString());
         Assert.assertEquals(invoiceJson.getInvoiceDate(), invoice.getInvoiceDate());
         Assert.assertEquals(invoiceJson.getTargetDate(), invoice.getTargetDate());
         Assert.assertEquals(invoiceJson.getInvoiceNumber(), String.valueOf(invoice.getInvoiceNumber()));
         Assert.assertEquals(invoiceJson.getBalance(), invoice.getBalance());
-        Assert.assertEquals(invoiceJson.getAccountId(), invoice.getAccountId());
+        Assert.assertEquals(invoiceJson.getAccountId(), invoice.getAccountId().toString());
         Assert.assertEquals(invoiceJson.getBundleKeys(), bundleKeys);
         Assert.assertEquals(invoiceJson.getCredits(), credits);
-        Assert.assertEquals(invoiceJson.getAuditLogs().size(),0);
-        Assert.assertEquals(invoiceJson.getStatus(), InvoiceStatus.COMMITTED);
+        Assert.assertNull(invoiceJson.getAuditLogs());
+        Assert.assertEquals(invoiceJson.getStatus(), InvoiceStatus.COMMITTED.toString());
     }
 
     private CreditJson createCreditJson() {
         final BigDecimal creditAmount = BigDecimal.TEN;
-        final UUID creditId = UUID.randomUUID();
         final Currency currency = Currency.USD;
-        final UUID invoiceId = UUID.randomUUID();
+        final String invoiceId = UUID.randomUUID().toString();
         final String invoiceNumber = UUID.randomUUID().toString();
         final LocalDate effectiveDate = clock.getUTCToday();
-        final UUID accountId = UUID.randomUUID();
-        return new CreditJson(creditId, creditAmount, currency, invoiceId, invoiceNumber, effectiveDate,  accountId, null, null, null);
+        final String accountId = UUID.randomUUID().toString();
+        return new CreditJson(creditAmount, currency.name(), invoiceId, invoiceNumber, effectiveDate,  accountId, null, null);
     }
 }

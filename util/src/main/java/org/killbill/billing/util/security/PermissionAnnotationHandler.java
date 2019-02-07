@@ -37,7 +37,7 @@ import com.google.common.collect.ImmutableList;
 
 public class PermissionAnnotationHandler extends AuthorizingAnnotationHandler {
 
-    private final TenantContext context = new DefaultTenantContext(null, null);
+    private final TenantContext context = new DefaultTenantContext(null);
 
     @Inject
     SecurityApi securityApi;

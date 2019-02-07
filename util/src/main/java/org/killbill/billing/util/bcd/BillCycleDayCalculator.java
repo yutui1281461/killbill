@@ -1,6 +1,6 @@
 /*
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2017 Groupon, Inc
+ * Copyright 2014-2017 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -31,8 +31,6 @@ import org.killbill.billing.subscription.api.SubscriptionBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
-
 public abstract class BillCycleDayCalculator {
 
     private static final Logger log = LoggerFactory.getLogger(BillCycleDayCalculator.class);
@@ -41,8 +39,7 @@ public abstract class BillCycleDayCalculator {
         int result = 0;
         switch (alignment) {
             case ACCOUNT:
-                Preconditions.checkState(accountBillCycleDayLocal != 0, "Account BCD should be set at this point");
-                result = accountBillCycleDayLocal;
+                result = accountBillCycleDayLocal != 0 ? accountBillCycleDayLocal : calculateOrRetrieveBcdFromSubscription(bcdCache, subscription, internalTenantContext);
                 break;
             case BUNDLE:
                 result = calculateOrRetrieveBcdFromSubscription(bcdCache, baseSubscription, internalTenantContext);

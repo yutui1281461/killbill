@@ -143,7 +143,6 @@ public class IncompletePaymentAttemptTask extends CompletionTaskBase<PaymentAtte
                                                                                                   attempt.getPaymentMethodId(),
                                                                                                   transaction.getAmount(),
                                                                                                   transaction.getCurrency(),
-                                                                                                  null,
                                                                                                   PluginPropertySerializer.deserialize(attempt.getPluginProperties()),
                                                                                                   internalCallContext,
                                                                                                   callContext);

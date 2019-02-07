@@ -23,19 +23,17 @@ import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.swagger.annotations.ApiModel;
 
-@ApiModel(value="ComboPayment", parent = JsonBase.class)
 public abstract class ComboPaymentJson extends JsonBase {
 
     private final AccountJson account;
     private final PaymentMethodJson paymentMethod;
-    private final List<PluginPropertyJson> paymentMethodPluginProperties;
+    private final Iterable<PluginPropertyJson> paymentMethodPluginProperties;
 
     @JsonCreator
     public ComboPaymentJson(@JsonProperty("account") final AccountJson account,
                             @JsonProperty("paymentMethod") final PaymentMethodJson paymentMethod,
-                            @JsonProperty("paymentMethodPluginProperties") final List<PluginPropertyJson> paymentMethodPluginProperties,
+                            @JsonProperty("paymentMethodPluginProperties") final Iterable<PluginPropertyJson> paymentMethodPluginProperties,
                             @JsonProperty("auditLogs") @Nullable final List<AuditLogJson> auditLogs) {
         super(auditLogs);
         this.account = account;
@@ -51,7 +49,7 @@ public abstract class ComboPaymentJson extends JsonBase {
         return paymentMethod;
     }
 
-    public List<PluginPropertyJson> getPaymentMethodPluginProperties() {
+    public Iterable<PluginPropertyJson> getPaymentMethodPluginProperties() {
         return paymentMethodPluginProperties;
     }
 

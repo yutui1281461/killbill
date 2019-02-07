@@ -18,12 +18,10 @@
 package org.killbill.billing.invoice.generator;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
@@ -41,15 +39,12 @@ import org.killbill.billing.invoice.api.InvoiceApiException;
 import org.killbill.billing.invoice.api.InvoiceItem;
 import org.killbill.billing.invoice.api.InvoiceItemType;
 import org.killbill.billing.invoice.generator.InvoiceWithMetadata.SubscriptionFutureNotificationDates;
-import org.killbill.billing.invoice.generator.InvoiceWithMetadata.TrackingRecordId;
 import org.killbill.billing.invoice.usage.RawUsageOptimizer;
 import org.killbill.billing.invoice.usage.RawUsageOptimizer.RawUsageOptimizerResult;
 import org.killbill.billing.invoice.usage.SubscriptionUsageInArrear;
 import org.killbill.billing.invoice.usage.SubscriptionUsageInArrear.SubscriptionUsageInArrearItemsAndNextNotificationDate;
 import org.killbill.billing.junction.BillingEvent;
 import org.killbill.billing.junction.BillingEventSet;
-import org.killbill.billing.util.config.definition.InvoiceConfig;
-import org.killbill.billing.util.config.definition.InvoiceConfig.UsageDetailMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,36 +61,32 @@ public class UsageInvoiceItemGenerator extends InvoiceItemGenerator {
     private static final Logger log = LoggerFactory.getLogger(UsageInvoiceItemGenerator.class);
 
     private final RawUsageOptimizer rawUsageOptimizer;
-    private final InvoiceConfig invoiceConfig;
 
     @Inject
-    public UsageInvoiceItemGenerator(final RawUsageOptimizer rawUsageOptimizer, final InvoiceConfig invoiceConfig) {
+    public UsageInvoiceItemGenerator(final RawUsageOptimizer rawUsageOptimizer) {
         this.rawUsageOptimizer = rawUsageOptimizer;
-        this.invoiceConfig = invoiceConfig;
     }
 
-
     @Override
-    public InvoiceGeneratorResult generateItems(final ImmutableAccountData account,
-                                                final UUID invoiceId,
-                                                final BillingEventSet eventSet,
-                                                @Nullable final Iterable<Invoice> existingInvoices,
-                                                final LocalDate targetDate,
-                                                final Currency targetCurrency,
-                                                final Map<UUID, SubscriptionFutureNotificationDates> perSubscriptionFutureNotificationDates,
-                                                final InternalCallContext internalCallContext) throws InvoiceApiException {
+    public List<InvoiceItem> generateItems(final ImmutableAccountData account,
+                                           final UUID invoiceId,
+                                           final BillingEventSet eventSet,
+                                           @Nullable final List<Invoice> existingInvoices,
+                                           final LocalDate targetDate,
+                                           final Currency targetCurrency,
+                                           final Map<UUID, SubscriptionFutureNotificationDates> perSubscriptionFutureNotificationDates,
+                                           final InternalCallContext internalCallContext) throws InvoiceApiException {
         final Map<UUID, List<InvoiceItem>> perSubscriptionInArrearUsageItems = extractPerSubscriptionExistingInArrearUsageItems(eventSet.getUsages(), existingInvoices);
         try {
             // Pretty-print the generated invoice items from the junction events
             final InvoiceItemGeneratorLogger invoiceItemGeneratorLogger = new InvoiceItemGeneratorLogger(invoiceId, account.getId(), "usage", log);
-            final UsageDetailMode usageDetailMode = invoiceConfig.getItemResultBehaviorMode(internalCallContext);
+
             final LocalDate minBillingEventDate = getMinBillingEventDate(eventSet, internalCallContext);
 
-            final Set<TrackingRecordId> trackingIds = new HashSet<>();
             final List<InvoiceItem> items = Lists.newArrayList();
             final Iterator<BillingEvent> events = eventSet.iterator();
 
-            RawUsageOptimizerResult rawUsgRes = null;
+            RawUsageOptimizerResult rawUsageOptimizerResult = null;
             List<BillingEvent> curEvents = Lists.newArrayList();
             UUID curSubscriptionId = null;
             while (events.hasNext()) {
@@ -107,31 +98,29 @@ public class UsageInvoiceItemGenerator extends InvoiceItemGenerator {
                 }
 
                 // Optimize to do the usage query only once after we know there are indeed some usage items
-                if (rawUsgRes == null &&
+                if (rawUsageOptimizerResult == null &&
                     Iterables.any(event.getUsages(), new Predicate<Usage>() {
                         @Override
                         public boolean apply(@Nullable final Usage input) {
                             return input.getBillingMode() == BillingMode.IN_ARREAR;
                         }
                     })) {
-                    rawUsgRes = rawUsageOptimizer.getInArrearUsage(minBillingEventDate, targetDate, Iterables.concat(perSubscriptionInArrearUsageItems.values()), eventSet.getUsages(), internalCallContext);
+                    rawUsageOptimizerResult = rawUsageOptimizer.getInArrearUsage(minBillingEventDate, targetDate, Iterables.concat(perSubscriptionInArrearUsageItems.values()), eventSet.getUsages(), internalCallContext);
                 }
 
                 // None of the billing events report any usage IN_ARREAR sections
-                if (rawUsgRes == null) {
+                if (rawUsageOptimizerResult == null) {
                     continue;
                 }
 
                 final UUID subscriptionId = event.getSubscription().getId();
                 if (curSubscriptionId != null && !curSubscriptionId.equals(subscriptionId)) {
-                    final SubscriptionUsageInArrear subscriptionUsageInArrear = new SubscriptionUsageInArrear(account.getId(), invoiceId, curEvents, rawUsgRes.getRawUsage(), rawUsgRes.getExistingTrackingIds(), targetDate, rawUsgRes.getRawUsageStartDate(), usageDetailMode, internalCallContext);
+                    final SubscriptionUsageInArrear subscriptionUsageInArrear = new SubscriptionUsageInArrear(account.getId(), invoiceId, curEvents, rawUsageOptimizerResult.getRawUsage(), targetDate, rawUsageOptimizerResult.getRawUsageStartDate(), internalCallContext);
                     final List<InvoiceItem> usageInArrearItems = perSubscriptionInArrearUsageItems.get(curSubscriptionId);
 
                     final SubscriptionUsageInArrearItemsAndNextNotificationDate subscriptionResult = subscriptionUsageInArrear.computeMissingUsageInvoiceItems(usageInArrearItems != null ? usageInArrearItems : ImmutableList.<InvoiceItem>of(), invoiceItemGeneratorLogger);
                     final List<InvoiceItem> newInArrearUsageItems = subscriptionResult.getInvoiceItems();
                     items.addAll(newInArrearUsageItems);
-                    trackingIds.addAll(subscriptionResult.getTrackingIds());
-
                     updatePerSubscriptionNextNotificationUsageDate(curSubscriptionId, subscriptionResult.getPerUsageNotificationDates(), BillingMode.IN_ARREAR, perSubscriptionFutureNotificationDates);
                     curEvents = Lists.newArrayList();
                 }
@@ -139,18 +128,18 @@ public class UsageInvoiceItemGenerator extends InvoiceItemGenerator {
                 curEvents.add(event);
             }
             if (curSubscriptionId != null) {
-                final SubscriptionUsageInArrear subscriptionUsageInArrear = new SubscriptionUsageInArrear(account.getId(), invoiceId, curEvents, rawUsgRes.getRawUsage(), rawUsgRes.getExistingTrackingIds(), targetDate, rawUsgRes.getRawUsageStartDate(), usageDetailMode, internalCallContext);
+                final SubscriptionUsageInArrear subscriptionUsageInArrear = new SubscriptionUsageInArrear(account.getId(), invoiceId, curEvents, rawUsageOptimizerResult.getRawUsage(), targetDate, rawUsageOptimizerResult.getRawUsageStartDate(), internalCallContext);
                 final List<InvoiceItem> usageInArrearItems = perSubscriptionInArrearUsageItems.get(curSubscriptionId);
 
                 final SubscriptionUsageInArrearItemsAndNextNotificationDate subscriptionResult = subscriptionUsageInArrear.computeMissingUsageInvoiceItems(usageInArrearItems != null ? usageInArrearItems : ImmutableList.<InvoiceItem>of(), invoiceItemGeneratorLogger);
                 final List<InvoiceItem> newInArrearUsageItems = subscriptionResult.getInvoiceItems();
                 items.addAll(newInArrearUsageItems);
-                trackingIds.addAll(subscriptionResult.getTrackingIds());
                 updatePerSubscriptionNextNotificationUsageDate(curSubscriptionId, subscriptionResult.getPerUsageNotificationDates(), BillingMode.IN_ARREAR, perSubscriptionFutureNotificationDates);
             }
+
             invoiceItemGeneratorLogger.logItems();
 
-            return new InvoiceGeneratorResult(items, trackingIds);
+            return items;
         } catch (final CatalogApiException e) {
             throw new InvoiceApiException(e);
         }
@@ -181,8 +170,8 @@ public class UsageInvoiceItemGenerator extends InvoiceItemGenerator {
         }
     }
 
-    private Map<UUID, List<InvoiceItem>> extractPerSubscriptionExistingInArrearUsageItems(final Map<String, Usage> knownUsage, @Nullable final Iterable<Invoice> existingInvoices) {
-        if (existingInvoices == null || Iterables.isEmpty(existingInvoices)) {
+    private Map<UUID, List<InvoiceItem>> extractPerSubscriptionExistingInArrearUsageItems(final Map<String, Usage> knownUsage, @Nullable final List<Invoice> existingInvoices) {
+        if (existingInvoices == null || existingInvoices.isEmpty()) {
             return ImmutableMap.of();
         }
 
@@ -196,7 +185,7 @@ public class UsageInvoiceItemGenerator extends InvoiceItemGenerator {
                     public boolean apply(final InvoiceItem input) {
                         if (input.getInvoiceItemType() == InvoiceItemType.USAGE) {
                             final Usage usage = knownUsage.get(input.getUsageName());
-                            return usage != null && usage.getBillingMode() == BillingMode.IN_ARREAR;
+                            return usage.getBillingMode() == BillingMode.IN_ARREAR;
                         }
                         return false;
                     }

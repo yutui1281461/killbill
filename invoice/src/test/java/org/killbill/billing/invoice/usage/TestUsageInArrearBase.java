@@ -1,6 +1,6 @@
 /*
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2017 Groupon, Inc
+ * Copyright 2014-2017 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -18,14 +18,11 @@
 package org.killbill.billing.invoice.usage;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.LocalDate;
 import org.killbill.billing.account.api.Account;
 import org.killbill.billing.catalog.DefaultInternationalPrice;
@@ -40,50 +37,29 @@ import org.killbill.billing.catalog.api.BillingPeriod;
 import org.killbill.billing.catalog.api.Currency;
 import org.killbill.billing.catalog.api.Plan;
 import org.killbill.billing.catalog.api.PlanPhase;
-import org.killbill.billing.catalog.api.Product;
-import org.killbill.billing.catalog.api.TierBlockPolicy;
 import org.killbill.billing.catalog.api.Usage;
 import org.killbill.billing.catalog.api.UsageType;
 import org.killbill.billing.invoice.InvoiceTestSuiteNoDB;
-import org.killbill.billing.invoice.generator.InvoiceWithMetadata.TrackingRecordId;
 import org.killbill.billing.junction.BillingEvent;
 import org.killbill.billing.subscription.api.SubscriptionBase;
 import org.killbill.billing.usage.RawUsage;
-import org.killbill.billing.util.config.definition.InvoiceConfig.UsageDetailMode;
-import org.killbill.billing.util.jackson.ObjectMapper;
 import org.mockito.Mockito;
 import org.testng.annotations.BeforeClass;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
-
 public abstract class TestUsageInArrearBase extends InvoiceTestSuiteNoDB {
-
-    protected static final Set<TrackingRecordId> EMPTY_EXISTING_TRACKING_IDS = ImmutableSet.of();
 
     protected int BCD;
     protected UUID accountId;
     protected UUID bundleId;
     protected UUID subscriptionId;
     protected UUID invoiceId;
-    protected String productName;
     protected String planName;
     protected String phaseName;
     protected Currency currency;
     protected String usageName;
-    protected ObjectMapper objectMapper;
 
     @BeforeClass(groups = "fast")
     protected void beforeClass() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         super.beforeClass();
         BCD = 15;
         usageName = "foo";
@@ -91,33 +67,13 @@ public abstract class TestUsageInArrearBase extends InvoiceTestSuiteNoDB {
         bundleId = UUID.randomUUID();
         subscriptionId = UUID.randomUUID();
         invoiceId = UUID.randomUUID();
-        productName = "productName";
         planName = "planName";
         phaseName = "phaseName";
         currency = Currency.BTC;
-        usageDetailMode = invoiceConfig.getItemResultBehaviorMode(internalCallContext);
-        objectMapper = new ObjectMapper();
     }
 
-    protected ContiguousIntervalCapacityUsageInArrear createContiguousIntervalCapacityInArrear(final DefaultUsage usage, final List<RawUsage> rawUsages, final LocalDate targetDate, final boolean closedInterval, final BillingEvent... events) {
-        return createContiguousIntervalCapacityInArrear(usage, rawUsages, targetDate, closedInterval, usageDetailMode, events);
-    }
-
-    protected ContiguousIntervalCapacityUsageInArrear createContiguousIntervalCapacityInArrear(final DefaultUsage usage, final List<RawUsage> rawUsages, final LocalDate targetDate, final boolean closedInterval, UsageDetailMode detailMode, final BillingEvent... events) {
-        final ContiguousIntervalCapacityUsageInArrear intervalCapacityInArrear = new ContiguousIntervalCapacityUsageInArrear(usage, accountId, invoiceId, rawUsages, EMPTY_EXISTING_TRACKING_IDS, targetDate, new LocalDate(events[0].getEffectiveDate()), detailMode, internalCallContext);
-        for (final BillingEvent event : events) {
-            intervalCapacityInArrear.addBillingEvent(event);
-        }
-        intervalCapacityInArrear.build(closedInterval);
-        return intervalCapacityInArrear;
-    }
-
-    protected ContiguousIntervalConsumableUsageInArrear createContiguousIntervalConsumableInArrear(final DefaultUsage usage, final List<RawUsage> rawUsages, final LocalDate targetDate, final boolean closedInterval, final BillingEvent... events) {
-        return createContiguousIntervalConsumableInArrear(usage, rawUsages, targetDate, closedInterval, usageDetailMode, events);
-    }
-
-    protected ContiguousIntervalConsumableUsageInArrear createContiguousIntervalConsumableInArrear(final DefaultUsage usage, final List<RawUsage> rawUsages, final LocalDate targetDate, final boolean closedInterval, UsageDetailMode detailMode, final BillingEvent... events) {
-        final ContiguousIntervalConsumableUsageInArrear intervalConsumableInArrear = new ContiguousIntervalConsumableUsageInArrear(usage, accountId, invoiceId, rawUsages, EMPTY_EXISTING_TRACKING_IDS, targetDate, new LocalDate(events[0].getEffectiveDate()), detailMode, internalCallContext);
+    protected ContiguousIntervalUsageInArrear createContiguousIntervalConsumableInArrear(final DefaultUsage usage, final List<RawUsage> rawUsages, final LocalDate targetDate, final boolean closedInterval, final BillingEvent... events) {
+        final ContiguousIntervalUsageInArrear intervalConsumableInArrear = new ContiguousIntervalUsageInArrear(usage, accountId, invoiceId, rawUsages, targetDate, new LocalDate(events[0].getEffectiveDate()), internalCallContext);
         for (final BillingEvent event : events) {
             intervalConsumableInArrear.addBillingEvent(event);
         }
@@ -125,12 +81,11 @@ public abstract class TestUsageInArrearBase extends InvoiceTestSuiteNoDB {
         return intervalConsumableInArrear;
     }
 
-    protected DefaultUsage createConsumableInArrearUsage(final String usageName, final BillingPeriod billingPeriod, final TierBlockPolicy tierBlockPolicy, final DefaultTier... tiers) {
+    protected DefaultUsage createConsumableInArrearUsage(final String usageName, final BillingPeriod billingPeriod, final DefaultTier... tiers) {
         final DefaultUsage usage = new DefaultUsage();
         usage.setName(usageName);
         usage.setBillingMode(BillingMode.IN_ARREAR);
         usage.setUsageType(UsageType.CONSUMABLE);
-        usage.setTierBlockPolicy(tierBlockPolicy);
         usage.setBillingPeriod(billingPeriod);
         usage.setTiers(tiers);
         return usage;
@@ -178,15 +133,12 @@ public abstract class TestUsageInArrearBase extends InvoiceTestSuiteNoDB {
     }
 
     protected BillingEvent createMockBillingEvent(final DateTime effectiveDate, final BillingPeriod billingPeriod, final List<Usage> usages) {
-        return createMockBillingEvent(BCD, effectiveDate, billingPeriod, usages);
-    }
-
-    protected BillingEvent createMockBillingEvent(final int bcd, final DateTime effectiveDate, final BillingPeriod billingPeriod, final List<Usage> usages) {
         final BillingEvent result = Mockito.mock(BillingEvent.class);
         Mockito.when(result.getCurrency()).thenReturn(Currency.BTC);
-        Mockito.when(result.getBillCycleDayLocal()).thenReturn(bcd);
+        Mockito.when(result.getBillCycleDayLocal()).thenReturn(BCD);
         Mockito.when(result.getEffectiveDate()).thenReturn(effectiveDate);
         Mockito.when(result.getBillingPeriod()).thenReturn(billingPeriod);
+
 
         final Account account = Mockito.mock(Account.class);
         Mockito.when(account.getId()).thenReturn(accountId);
@@ -196,12 +148,8 @@ public abstract class TestUsageInArrearBase extends InvoiceTestSuiteNoDB {
         Mockito.when(subscription.getBundleId()).thenReturn(bundleId);
         Mockito.when(result.getSubscription()).thenReturn(subscription);
 
-        final Product product = Mockito.mock(Product.class);
-        Mockito.when(product.getName()).thenReturn(productName);
-
         final Plan plan = Mockito.mock(Plan.class);
         Mockito.when(plan.getName()).thenReturn(planName);
-        Mockito.when(plan.getProduct()).thenReturn(product);
         Mockito.when(result.getPlan()).thenReturn(plan);
 
         final PlanPhase phase = Mockito.mock(PlanPhase.class);
@@ -210,56 +158,6 @@ public abstract class TestUsageInArrearBase extends InvoiceTestSuiteNoDB {
 
         Mockito.when(result.getUsages()).thenReturn(usages);
         return result;
-    }
-
-    //
-    // Each input `RawUsage` should end up creating one TrackingRecordId
-    // Regardless of how test records trackingId -- grouped in one, or multiple calls-- and regardless of test matrix,  the logics below should remain true.
-    //
-    protected void checkTrackingIds(final List<RawUsage> rawUsages, final Set<TrackingRecordId> trackingRecords) {
-
-        // Verify we have same input and output
-        assertEquals(rawUsages.size(), trackingRecords.size());
-
-        final Map<String, List<RawUsage>> trackingIdMapping = new HashMap<>();
-        for (final RawUsage u : rawUsages) {
-            if (!trackingIdMapping.containsKey(u.getTrackingId())) {
-                trackingIdMapping.put(u.getTrackingId(), new ArrayList<>());
-            }
-            trackingIdMapping.get(u.getTrackingId()).add(u);
-        }
-
-        final Set<String> trackingIds = ImmutableSet.copyOf(Iterables.transform(trackingRecords, new Function<TrackingRecordId, String>() {
-            @Override
-            public String apply(final TrackingRecordId input) {
-                return input.getTrackingId();
-            }
-        }));
-
-        // Verify the per trackingId input matches the per trackingId output
-        assertEquals(trackingIdMapping.size(), trackingIds.size());
-
-        for (final String id : trackingIdMapping.keySet()) {
-
-            final List<RawUsage> rawUsageForId = trackingIdMapping.get(id);
-            for (RawUsage u : rawUsageForId) {
-
-                final TrackingRecordId found = Iterables.tryFind(trackingRecords, new Predicate<TrackingRecordId>() {
-                    @Override
-                    public boolean apply(final TrackingRecordId input) {
-                        return input.getTrackingId().equals(u.getTrackingId()) &&
-                               input.getRecordDate().equals(u.getDate()) &&
-                               input.getUnitType().equals(u.getUnitType());
-                    }
-                }).orNull();
-                assertNotNull(found, "Cannot find tracking Id " + u.getTrackingId());
-
-                assertEquals(found.getSubscriptionId(), subscriptionId);
-                assertEquals(found.getInvoiceId(), invoiceId);
-                assertEquals(found.getRecordDate(), u.getDate());
-                assertEquals(found.getUnitType(), u.getUnitType());
-            }
-        }
     }
 
 }

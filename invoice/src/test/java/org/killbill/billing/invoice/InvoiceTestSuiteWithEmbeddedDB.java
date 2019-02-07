@@ -18,14 +18,13 @@
 
 package org.killbill.billing.invoice;
 
-import java.util.Map;
-
 import org.killbill.billing.GuicyKillbillTestSuiteWithEmbeddedDB;
 import org.killbill.billing.account.api.AccountInternalApi;
 import org.killbill.billing.account.api.AccountUserApi;
 import org.killbill.billing.catalog.api.Currency;
 import org.killbill.billing.invoice.api.DefaultInvoiceService;
 import org.killbill.billing.invoice.api.InvoiceInternalApi;
+import org.killbill.billing.invoice.api.InvoicePaymentApi;
 import org.killbill.billing.invoice.api.InvoiceService;
 import org.killbill.billing.invoice.api.InvoiceUserApi;
 import org.killbill.billing.invoice.dao.InvoiceDao;
@@ -42,6 +41,8 @@ import org.killbill.billing.util.callcontext.InternalCallContextFactory;
 import org.killbill.billing.util.config.definition.InvoiceConfig;
 import org.killbill.billing.util.dao.NonEntityDao;
 import org.killbill.bus.api.PersistentBus;
+import org.killbill.clock.Clock;
+import org.killbill.clock.ClockMock;
 import org.killbill.commons.locker.GlobalLocker;
 import org.killbill.notificationq.api.NotificationQueueService;
 import org.slf4j.Logger;
@@ -69,6 +70,8 @@ public abstract class InvoiceTestSuiteWithEmbeddedDB extends GuicyKillbillTestSu
     @Inject
     protected InvoiceUserApi invoiceUserApi;
     @Inject
+    protected InvoicePaymentApi invoicePaymentApi;
+    @Inject
     protected InvoiceGenerator generator;
     @Inject
     protected BillingInternalApi billingApi;
@@ -89,6 +92,8 @@ public abstract class InvoiceTestSuiteWithEmbeddedDB extends GuicyKillbillTestSu
     @Inject
     protected GlobalLocker locker;
     @Inject
+    protected ClockMock clock;
+    @Inject
     protected InternalCallContextFactory internalCallContextFactory;
     @Inject
     protected InvoiceInternalApi invoiceInternalApi;
@@ -108,27 +113,19 @@ public abstract class InvoiceTestSuiteWithEmbeddedDB extends GuicyKillbillTestSu
     protected ParkedAccountsManager parkedAccountsManager;
 
     @Override
-    protected KillbillConfigSource getConfigSource(final Map<String, String> extraProperties) {
-        return getConfigSource("/resource.properties", extraProperties);
+    protected KillbillConfigSource getConfigSource() {
+        return getConfigSource("/resource.properties");
     }
 
     @BeforeClass(groups = "slow")
     protected void beforeClass() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
-        final Injector injector = Guice.createInjector(new TestInvoiceModuleWithEmbeddedDb(configSource, clock));
+        final Injector injector = Guice.createInjector(new TestInvoiceModuleWithEmbeddedDb(configSource));
         injector.injectMembers(this);
     }
 
     @Override
     @BeforeMethod(groups = "slow")
     public void beforeMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         super.beforeMethod();
         controllerDispatcher.clearAll();
         bus.start();
@@ -147,10 +144,6 @@ public abstract class InvoiceTestSuiteWithEmbeddedDB extends GuicyKillbillTestSu
 
     @AfterMethod(groups = "slow")
     public void afterMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         bus.stop();
         stopInvoiceService(invoiceService);
     }

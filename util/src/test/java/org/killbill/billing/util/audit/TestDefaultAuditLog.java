@@ -1,9 +1,7 @@
 /*
  * Copyright 2010-2012 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
  *
- * The Billing Project licenses this file to you under the Apache License, version 2.0
+ * Ning licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
  * License.  You may obtain a copy of the License at:
  *
@@ -20,17 +18,19 @@ package org.killbill.billing.util.audit;
 
 import java.util.UUID;
 
+import org.testng.Assert;
+import org.testng.annotations.Test;
+
 import org.killbill.billing.ObjectType;
 import org.killbill.billing.callcontext.DefaultCallContext;
+import org.killbill.clock.ClockMock;
 import org.killbill.billing.util.UtilTestSuiteNoDB;
 import org.killbill.billing.util.audit.dao.AuditLogModelDao;
+import org.killbill.billing.util.callcontext.CallContext;
 import org.killbill.billing.util.callcontext.CallOrigin;
 import org.killbill.billing.util.callcontext.UserType;
 import org.killbill.billing.util.dao.EntityAudit;
 import org.killbill.billing.util.dao.TableName;
-import org.killbill.clock.ClockMock;
-import org.testng.Assert;
-import org.testng.annotations.Test;
 
 public class TestDefaultAuditLog extends UtilTestSuiteNoDB {
 
@@ -41,13 +41,13 @@ public class TestDefaultAuditLog extends UtilTestSuiteNoDB {
         final ChangeType changeType = ChangeType.DELETE;
         final EntityAudit entityAudit = new EntityAudit(tableName, recordId, changeType, null);
 
-        final UUID accountId = UUID.randomUUID();
         final UUID tenantId = UUID.randomUUID();
         final String userName = UUID.randomUUID().toString();
         final CallOrigin callOrigin = CallOrigin.EXTERNAL;
         final UserType userType = UserType.CUSTOMER;
         final UUID userToken = UUID.randomUUID();
-        final DefaultCallContext callContext = new DefaultCallContext(accountId, tenantId, userName, callOrigin, userType, userToken, clock);
+        final ClockMock clock = new ClockMock();
+        final CallContext callContext = new DefaultCallContext(tenantId, userName, callOrigin, userType, userToken, clock);
 
         final AuditLog auditLog = new DefaultAuditLog(new AuditLogModelDao(entityAudit, callContext), ObjectType.ACCOUNT_EMAIL, UUID.randomUUID());
         Assert.assertEquals(auditLog.getChangeType(), changeType);
@@ -65,13 +65,13 @@ public class TestDefaultAuditLog extends UtilTestSuiteNoDB {
         final ChangeType changeType = ChangeType.DELETE;
         final EntityAudit entityAudit = new EntityAudit(tableName, recordId, changeType, null);
 
-        final UUID accountId = UUID.randomUUID();
         final UUID tenantId = UUID.randomUUID();
         final String userName = UUID.randomUUID().toString();
         final CallOrigin callOrigin = CallOrigin.EXTERNAL;
         final UserType userType = UserType.CUSTOMER;
         final UUID userToken = UUID.randomUUID();
-        final DefaultCallContext callContext = new DefaultCallContext(accountId, tenantId, userName, callOrigin, userType, userToken, clock);
+        final ClockMock clock = new ClockMock();
+        final CallContext callContext = new DefaultCallContext(tenantId, userName, callOrigin, userType, userToken, clock);
 
         final AuditLogModelDao auditLog = new AuditLogModelDao(entityAudit, callContext);
         Assert.assertEquals(auditLog, auditLog);
@@ -80,7 +80,7 @@ public class TestDefaultAuditLog extends UtilTestSuiteNoDB {
         Assert.assertEquals(sameAuditLog, auditLog);
 
         clock.addMonths(1);
-        final DefaultCallContext otherCallContext = new DefaultCallContext(accountId, tenantId, userName, callOrigin, userType, userToken, clock);
+        final CallContext otherCallContext = new DefaultCallContext(tenantId, userName, callOrigin, userType, userToken, clock);
         final AuditLogModelDao otherAuditLog = new AuditLogModelDao(entityAudit, otherCallContext);
         Assert.assertNotEquals(otherAuditLog, auditLog);
     }

@@ -65,9 +65,6 @@ public class TestPaymentProcessor extends PaymentTestSuiteWithEmbeddedDB {
 
     @BeforeMethod(groups = "slow")
     public void setUp() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
         mockPaymentProviderPlugin = (MockPaymentProviderPlugin) registry.getServiceForName(MockPaymentProviderPlugin.PLUGIN_NAME);
 
         account = testHelper.createTestAccount(UUID.randomUUID().toString(), true);
@@ -83,7 +80,7 @@ public class TestPaymentProcessor extends PaymentTestSuiteWithEmbeddedDB {
         final Iterable<PluginProperty> pluginPropertiesToDriveTransationToUnknown = ImmutableList.<PluginProperty>of(new PluginProperty(MockPaymentProviderPlugin.PLUGIN_PROPERTY_PAYMENT_PLUGIN_STATUS_OVERRIDE, PaymentPluginStatus.UNDEFINED, false));
 
         final String authorizationKey = UUID.randomUUID().toString();
-        final Payment authorization = paymentProcessor.createAuthorization(true, null, account, null, null, TEN, CURRENCY, null, paymentExternalKey, authorizationKey,
+        final Payment authorization = paymentProcessor.createAuthorization(true, null, account, null, null, TEN, CURRENCY, paymentExternalKey, authorizationKey,
                                                                            null, null, SHOULD_LOCK_ACCOUNT, pluginPropertiesToDriveTransationToUnknown, callContext, internalCallContext);
         verifyPayment(authorization, paymentExternalKey, ZERO, ZERO, ZERO, 1);
         final UUID paymentId = authorization.getId();
@@ -92,7 +89,7 @@ public class TestPaymentProcessor extends PaymentTestSuiteWithEmbeddedDB {
 
         mockPaymentProviderPlugin.overridePaymentPluginStatus(paymentId, authorization.getTransactions().get(0).getId(), PaymentPluginStatus.PROCESSED);
 
-        final List<Payment> payments = paymentControlAwareRefresher.getAccountPayments(account.getId(), true, false, callContext, internalCallContext);
+        final List<Payment> payments = paymentProcessor.getAccountPayments(account.getId(), true, false, callContext, internalCallContext);
         Assert.assertEquals(payments.size(), 1);
         verifyPayment(payments.get(0), paymentExternalKey, TEN, ZERO, ZERO, 1);
         verifyPaymentTransaction(payments.get(0).getTransactions().get(0), authorizationKey, TransactionType.AUTHORIZE, TEN, paymentId);
@@ -107,7 +104,7 @@ public class TestPaymentProcessor extends PaymentTestSuiteWithEmbeddedDB {
 
         // AUTH pre-3DS
         final String authorizationKey = UUID.randomUUID().toString();
-        final Payment authorization = paymentProcessor.createAuthorization(true, null, account, null, null, TEN, CURRENCY, null,paymentExternalKey, authorizationKey,
+        final Payment authorization = paymentProcessor.createAuthorization(true, null, account, null, null, TEN, CURRENCY, paymentExternalKey, authorizationKey,
                                                                            null, null, SHOULD_LOCK_ACCOUNT, pluginPropertiesToDriveTransationToPending, callContext, internalCallContext);
         verifyPayment(authorization, paymentExternalKey, ZERO, ZERO, ZERO, 1);
         final UUID paymentId = authorization.getId();
@@ -115,7 +112,7 @@ public class TestPaymentProcessor extends PaymentTestSuiteWithEmbeddedDB {
         paymentBusListener.verify(1, account.getId(), paymentId, TEN, TransactionStatus.PENDING);
 
         // AUTH post-3DS
-        final Payment authorizationPost3DS = paymentProcessor.createAuthorization(true, null, account, null, paymentId, TEN, CURRENCY, null,paymentExternalKey, authorizationKey,
+        final Payment authorizationPost3DS = paymentProcessor.createAuthorization(true, null, account, null, paymentId, TEN, CURRENCY, paymentExternalKey, authorizationKey,
                                                                                   null, null, SHOULD_LOCK_ACCOUNT, PLUGIN_PROPERTIES, callContext, internalCallContext);
         verifyPayment(authorizationPost3DS, paymentExternalKey, TEN, ZERO, ZERO, 1);
         verifyPaymentTransaction(authorizationPost3DS.getTransactions().get(0), authorizationKey, TransactionType.AUTHORIZE, TEN, paymentId);
@@ -123,7 +120,7 @@ public class TestPaymentProcessor extends PaymentTestSuiteWithEmbeddedDB {
 
         // CAPTURE
         final String capture1Key = UUID.randomUUID().toString();
-        final Payment partialCapture1 = paymentProcessor.createCapture(true, null, account, paymentId, FIVE, CURRENCY, null,capture1Key,
+        final Payment partialCapture1 = paymentProcessor.createCapture(true, null, account, paymentId, FIVE, CURRENCY, capture1Key,
                                                                        null, SHOULD_LOCK_ACCOUNT, PLUGIN_PROPERTIES, callContext, internalCallContext);
         verifyPayment(partialCapture1, paymentExternalKey, TEN, FIVE, ZERO, 2);
         verifyPaymentTransaction(partialCapture1.getTransactions().get(1), capture1Key, TransactionType.CAPTURE, FIVE, paymentId);
@@ -131,7 +128,7 @@ public class TestPaymentProcessor extends PaymentTestSuiteWithEmbeddedDB {
 
         // CAPTURE
         final String capture2Key = UUID.randomUUID().toString();
-        final Payment partialCapture2 = paymentProcessor.createCapture(true, null, account, paymentId, FIVE, CURRENCY, null,capture2Key,
+        final Payment partialCapture2 = paymentProcessor.createCapture(true, null, account, paymentId, FIVE, CURRENCY, capture2Key,
                                                                        null, SHOULD_LOCK_ACCOUNT, PLUGIN_PROPERTIES, callContext, internalCallContext);
         verifyPayment(partialCapture2, paymentExternalKey, TEN, TEN, ZERO, 3);
         verifyPaymentTransaction(partialCapture2.getTransactions().get(2), capture2Key, TransactionType.CAPTURE, FIVE, paymentId);
@@ -139,7 +136,7 @@ public class TestPaymentProcessor extends PaymentTestSuiteWithEmbeddedDB {
 
         // REFUND
         final String refund1Key = UUID.randomUUID().toString();
-        final Payment partialRefund1 = paymentProcessor.createRefund(true, null, account, paymentId, FIVE, CURRENCY, null,refund1Key,
+        final Payment partialRefund1 = paymentProcessor.createRefund(true, null, account, paymentId, FIVE, CURRENCY, refund1Key,
                                                                      null, SHOULD_LOCK_ACCOUNT, PLUGIN_PROPERTIES, callContext, internalCallContext);
         verifyPayment(partialRefund1, paymentExternalKey, TEN, TEN, FIVE, 4);
         verifyPaymentTransaction(partialRefund1.getTransactions().get(3), refund1Key, TransactionType.REFUND, FIVE, paymentId);
@@ -147,7 +144,7 @@ public class TestPaymentProcessor extends PaymentTestSuiteWithEmbeddedDB {
 
         // REFUND
         final String refund2Key = UUID.randomUUID().toString();
-        final Payment partialRefund2 = paymentProcessor.createRefund(true, null, account, paymentId, FIVE, CURRENCY, null,refund2Key,
+        final Payment partialRefund2 = paymentProcessor.createRefund(true, null, account, paymentId, FIVE, CURRENCY, refund2Key,
                                                                      null, SHOULD_LOCK_ACCOUNT, PLUGIN_PROPERTIES, callContext, internalCallContext);
         verifyPayment(partialRefund2, paymentExternalKey, TEN, TEN, TEN, 5);
         verifyPaymentTransaction(partialRefund2.getTransactions().get(4), refund2Key, TransactionType.REFUND, FIVE, paymentId);
@@ -160,7 +157,7 @@ public class TestPaymentProcessor extends PaymentTestSuiteWithEmbeddedDB {
 
         // AUTH
         final String authorizationKey = UUID.randomUUID().toString();
-        final Payment authorization = paymentProcessor.createAuthorization(true, null, account, null, null, TEN, CURRENCY, null,paymentExternalKey, authorizationKey,
+        final Payment authorization = paymentProcessor.createAuthorization(true, null, account, null, null, TEN, CURRENCY, paymentExternalKey, authorizationKey,
                                                                            null, null, SHOULD_LOCK_ACCOUNT, PLUGIN_PROPERTIES, callContext, internalCallContext);
         verifyPayment(authorization, paymentExternalKey, TEN, ZERO, ZERO, 1);
         final UUID paymentId = authorization.getId();
@@ -169,7 +166,7 @@ public class TestPaymentProcessor extends PaymentTestSuiteWithEmbeddedDB {
 
         // VOID
         final String voidKey = UUID.randomUUID().toString();
-        final Payment voidTransaction = paymentProcessor.createVoid(true, null, account, paymentId, null, voidKey,
+        final Payment voidTransaction = paymentProcessor.createVoid(true, null, account, paymentId, voidKey,
                                                                     null, SHOULD_LOCK_ACCOUNT, PLUGIN_PROPERTIES, callContext, internalCallContext);
         verifyPayment(voidTransaction, paymentExternalKey, ZERO, ZERO, ZERO, 2);
         verifyPaymentTransaction(voidTransaction.getTransactions().get(1), voidKey, TransactionType.VOID, null, paymentId);
@@ -182,7 +179,7 @@ public class TestPaymentProcessor extends PaymentTestSuiteWithEmbeddedDB {
 
         // PURCHASE
         final String purchaseKey = UUID.randomUUID().toString();
-        final Payment purchase = paymentProcessor.createPurchase(true, null, account, null, null, TEN, CURRENCY, null,paymentExternalKey, purchaseKey,
+        final Payment purchase = paymentProcessor.createPurchase(true, null, account, null, null, TEN, CURRENCY, paymentExternalKey, purchaseKey,
                                                                  null, null, SHOULD_LOCK_ACCOUNT, PLUGIN_PROPERTIES, callContext, internalCallContext);
         verifyPayment(purchase, paymentExternalKey, ZERO, ZERO, ZERO, 1);
         final UUID paymentId = purchase.getId();
@@ -196,7 +193,7 @@ public class TestPaymentProcessor extends PaymentTestSuiteWithEmbeddedDB {
 
         // CREDIT
         final String creditKey = UUID.randomUUID().toString();
-        final Payment purchase = paymentProcessor.createCredit(true, null, account, null, null, TEN, CURRENCY, null,paymentExternalKey, creditKey,
+        final Payment purchase = paymentProcessor.createCredit(true, null, account, null, null, TEN, CURRENCY, paymentExternalKey, creditKey,
                                                                null, null, SHOULD_LOCK_ACCOUNT, PLUGIN_PROPERTIES, callContext, internalCallContext);
         verifyPayment(purchase, paymentExternalKey, ZERO, ZERO, ZERO, 1);
         final UUID paymentId = purchase.getId();
@@ -211,7 +208,7 @@ public class TestPaymentProcessor extends PaymentTestSuiteWithEmbeddedDB {
 
         // AUTH
         final String authorizationKey = UUID.randomUUID().toString();
-        final Payment authorization = paymentProcessor.createAuthorization(true, null, account, null, null, TEN, CURRENCY, null,paymentExternalKey, authorizationKey,
+        final Payment authorization = paymentProcessor.createAuthorization(true, null, account, null, null, TEN, CURRENCY, paymentExternalKey, authorizationKey,
                                                                            null, null, SHOULD_LOCK_ACCOUNT, pluginPropertiesToDriveTransationToPending, callContext, internalCallContext);
         verifyPayment(authorization, paymentExternalKey, ZERO, ZERO, ZERO, 1);
         final UUID paymentId = authorization.getId();
@@ -221,13 +218,13 @@ public class TestPaymentProcessor extends PaymentTestSuiteWithEmbeddedDB {
         // REFUND
         final String refundKey = UUID.randomUUID().toString();
         try {
-            paymentProcessor.createRefund(true, null, account, paymentId, TEN, CURRENCY, null,refundKey,
+            paymentProcessor.createRefund(true, null, account, paymentId, TEN, CURRENCY, refundKey,
                                           null, SHOULD_LOCK_ACCOUNT, PLUGIN_PROPERTIES, callContext, internalCallContext);
             Assert.fail();
         } catch (final PaymentApiException e) {
             Assert.assertEquals(e.getCode(), ErrorCode.PAYMENT_INVALID_OPERATION.getCode());
         }
-        final Payment refreshedPayment = paymentRefresher.getPayment(authorization.getId(), false, false, PLUGIN_PROPERTIES, callContext, internalCallContext);
+        final Payment refreshedPayment = paymentProcessor.getPayment(authorization.getId(), false, false, PLUGIN_PROPERTIES, callContext, internalCallContext);
         // Make sure no state has been created (no UNKNOWN transaction for the refund)
         verifyPayment(refreshedPayment, paymentExternalKey, ZERO, ZERO, ZERO, 1);
         paymentBusListener.verify(0, 1, 0, account.getId(), paymentId, ZERO, TransactionStatus.PAYMENT_FAILURE);
@@ -240,7 +237,7 @@ public class TestPaymentProcessor extends PaymentTestSuiteWithEmbeddedDB {
 
         // Create Pending AUTH
         final String authorizationKey = UUID.randomUUID().toString();
-        final Payment authorization = paymentProcessor.createAuthorization(true, null, account, null, null, TEN, CURRENCY, null,paymentExternalKey, authorizationKey,
+        final Payment authorization = paymentProcessor.createAuthorization(true, null, account, null, null, TEN, CURRENCY, paymentExternalKey, authorizationKey,
                                                                            null, null, SHOULD_LOCK_ACCOUNT, pluginPropertiesToDriveTransationToPending, callContext, internalCallContext);
         final PaymentTransaction pendingTransaction = authorization.getTransactions().get(0);
         Assert.assertEquals(pendingTransaction.getTransactionStatus(), TransactionStatus.PENDING);

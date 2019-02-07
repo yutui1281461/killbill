@@ -42,7 +42,6 @@ import org.killbill.billing.entitlement.DefaultEntitlementService;
 import org.killbill.billing.entitlement.block.BlockingChecker.BlockingAggregator;
 import org.killbill.billing.entitlement.block.DefaultBlockingChecker.DefaultBlockingAggregator;
 import org.killbill.billing.junction.DefaultBlockingState;
-import org.killbill.billing.platform.api.KillbillService.KILLBILL_SERVICES;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
@@ -184,10 +183,10 @@ public class BlockingStateOrdering extends EntitlementOrderingBase {
 
         // For consistency, make sure entitlement-service and billing-service events always happen in a
         // deterministic order (e.g. after other services for STOP events and before for START events)
-        if ((KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName().equals(serviceName) ||
+        if ((DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME.equals(serviceName) ||
              BILLING_SERVICE_NAME.equals(serviceName) ||
              ENT_BILLING_SERVICE_NAME.equals(serviceName)) &&
-            !(KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName().equals(next.getServiceName()) ||
+            !(DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME.equals(next.getServiceName()) ||
               BILLING_SERVICE_NAME.equals(next.getServiceName()) ||
               ENT_BILLING_SERVICE_NAME.equals(next.getServiceName()))) {
             // first is an entitlement-service or billing-service event, but not second
@@ -197,10 +196,10 @@ public class BlockingStateOrdering extends EntitlementOrderingBase {
             } else {
                 return -1;
             }
-        } else if ((KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName().equals(next.getServiceName()) ||
+        } else if ((DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME.equals(next.getServiceName()) ||
                     BILLING_SERVICE_NAME.equals(next.getServiceName()) ||
                     ENT_BILLING_SERVICE_NAME.equals(next.getServiceName())) &&
-                   !(KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName().equals(serviceName) ||
+                   !(DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME.equals(serviceName) ||
                      BILLING_SERVICE_NAME.equals(serviceName) ||
                      ENT_BILLING_SERVICE_NAME.equals(serviceName))) {
             // second is an entitlement-service or billing-service event, but not first
@@ -478,11 +477,11 @@ public class BlockingStateOrdering extends EntitlementOrderingBase {
             // across all services
             //
             final BlockingAggregator stateBefore = getState();
-            if (KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName().equals(fixedBlockingState.getService())) {
+            if (DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME.equals(fixedBlockingState.getService())) {
                 // Some blocking states will be added as entitlement-service and billing-service via addEntitlementEvent
                 // (see above). Because of it, we need to multiplex entitlement events here.
                 // TODO - this is magic and fragile. We should revisit how we create this state machine.
-                perServiceBlockingState.put(KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName(), fixedBlockingState);
+                perServiceBlockingState.put(DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME, fixedBlockingState);
                 perServiceBlockingState.put(BILLING_SERVICE_NAME, fixedBlockingState);
             } else {
                 perServiceBlockingState.put(fixedBlockingState.getService(), fixedBlockingState);
@@ -507,7 +506,7 @@ public class BlockingStateOrdering extends EntitlementOrderingBase {
                 result.add(SubscriptionEventType.PAUSE_BILLING);
             }
 
-            if (!shouldResumeEntitlement && !shouldResumeBilling && !shouldBlockEntitlement && !shouldBlockBilling && !fixedBlockingState.getService().equals(KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName())) {
+            if (!shouldResumeEntitlement && !shouldResumeBilling && !shouldBlockEntitlement && !shouldBlockBilling && !fixedBlockingState.getService().equals(DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME)) {
                 result.add(SubscriptionEventType.SERVICE_STATE_CHANGE);
             }
             return result;
@@ -523,12 +522,12 @@ public class BlockingStateOrdering extends EntitlementOrderingBase {
     }
 
     private static boolean isStartEntitlement(final BlockingState blockingState) {
-        return KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName().equals(blockingState.getService()) &&
+        return DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME.equals(blockingState.getService()) &&
                DefaultEntitlementApi.ENT_STATE_START.equals(blockingState.getStateName());
     }
 
     private static boolean isStopEntitlement(final BlockingState blockingState) {
-        return KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName().equals(blockingState.getService()) &&
+        return DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME.equals(blockingState.getService()) &&
                DefaultEntitlementApi.ENT_STATE_CANCELLED.equals(blockingState.getStateName());
     }
 
@@ -561,7 +560,7 @@ public class BlockingStateOrdering extends EntitlementOrderingBase {
                                                                                                     SubscriptionEventType.START_ENTITLEMENT,
                                                                                                     false,
                                                                                                     false,
-                                                                                                    KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName(),
+                                                                                                    DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME,
                                                                                                     SubscriptionEventType.START_ENTITLEMENT.toString(),
                                                                                                     cur.getPrevProduct(),
                                                                                                     cur.getPrevPlan(),
@@ -599,7 +598,7 @@ public class BlockingStateOrdering extends EntitlementOrderingBase {
             final Set<UUID> ENT_STATE_START_entitlementIdSet = ImmutableSet.copyOf(Iterables.transform(Iterables.filter(blockingStates, new Predicate<BlockingState>() {
                 @Override
                 public boolean apply(final BlockingState input) {
-                    return input.getService().equals(KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName()) && input.getStateName().equals(DefaultEntitlementApi.ENT_STATE_START);
+                    return input.getService().equals(DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME) && input.getStateName().equals(DefaultEntitlementApi.ENT_STATE_START);
                 }
             }), new Function<BlockingState, UUID>() {
                 @Override

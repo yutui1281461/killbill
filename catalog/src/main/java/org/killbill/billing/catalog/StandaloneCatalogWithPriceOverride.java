@@ -1,6 +1,6 @@
 /*
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2016 Groupon, Inc
+ * Copyright 2014-2016 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -17,18 +17,14 @@
 
 package org.killbill.billing.catalog;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.util.regex.Matcher;
 
-import org.killbill.billing.ErrorCode;
 import org.killbill.billing.callcontext.InternalCallContext;
 import org.killbill.billing.callcontext.InternalTenantContext;
 import org.killbill.billing.catalog.api.CatalogApiException;
 import org.killbill.billing.catalog.api.Plan;
 import org.killbill.billing.catalog.api.PlanPhase;
+import org.killbill.billing.catalog.api.PlanPhasePriceOverride;
 import org.killbill.billing.catalog.api.PlanPhasePriceOverridesWithCallContext;
 import org.killbill.billing.catalog.api.PlanSpecifier;
 import org.killbill.billing.catalog.api.Product;
@@ -39,24 +35,21 @@ import org.killbill.billing.util.callcontext.InternalCallContextFactory;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-public class StandaloneCatalogWithPriceOverride extends StandaloneCatalog implements StaticCatalog, Externalizable {
+public class StandaloneCatalogWithPriceOverride extends StandaloneCatalog implements StaticCatalog {
 
-    private Long tenantRecordId;
+    private final Long tenantRecordId;
 
     /* Since we offer endpoints that attempt to serialize catalog objects, we need to explicitly tell Jackson to ignore those fields */
     @JsonIgnore
-    private InternalCallContextFactory internalCallContextFactory;
+    private final InternalCallContextFactory internalCallContextFactory;
     @JsonIgnore
-    private PriceOverride priceOverride;
-
-    // Required for deserialization
-    public StandaloneCatalogWithPriceOverride() {
-    }
+    private final PriceOverride priceOverride;
 
     public StandaloneCatalogWithPriceOverride(final StandaloneCatalog catalog, final PriceOverride priceOverride, final Long tenantRecordId, final InternalCallContextFactory internalCallContextFactory) {
         // Initialize from input catalog
         setCatalogName(catalog.getCatalogName());
         setEffectiveDate(catalog.getEffectiveDate());
+        setRecurringBillingMode(catalog.getRecurringBillingMode());
         setProducts(catalog.getCurrentProducts());
         setPlans(catalog.getCurrentPlans());
         setPriceLists(catalog.getPriceLists());
@@ -76,12 +69,14 @@ public class StandaloneCatalogWithPriceOverride extends StandaloneCatalog implem
         return internalCallContextFactory;
     }
 
+
     @Override
     public Plan createOrFindCurrentPlan(final PlanSpecifier spec, final PlanPhasePriceOverridesWithCallContext overrides) throws CatalogApiException {
         final Plan defaultPlan = super.createOrFindCurrentPlan(spec, null);
         if (overrides == null ||
             overrides.getOverrides() == null ||
-            overrides.getOverrides().isEmpty()) {
+            overrides.getOverrides().isEmpty() ||
+            isOverrideUsedForPlanAlignmentTargetPhaseType(overrides)) {
             return defaultPlan;
         }
 
@@ -89,14 +84,27 @@ public class StandaloneCatalogWithPriceOverride extends StandaloneCatalog implem
         return priceOverride.getOrCreateOverriddenPlan(this, defaultPlan, CatalogDateHelper.toUTCDateTime(getEffectiveDate()), overrides.getOverrides(), internalCallContext);
     }
 
+    // This is a hack used to specify a target PhaseType when making a changePlan operation. Undocumented feature
+    private boolean isOverrideUsedForPlanAlignmentTargetPhaseType(final PlanPhasePriceOverridesWithCallContext overrides) {
+        if (overrides.getOverrides().size() != 1) {
+            return false;
+        }
+
+        final PlanPhasePriceOverride override = overrides.getOverrides().get(0);
+        return override.getCurrency() == null &&
+               override.getFixedPrice() == null &&
+               override.getRecurringPrice() == null &&
+               override.getPhaseName() == null &&
+               override.getPlanPhaseSpecifier() != null &&
+               override.getPlanPhaseSpecifier().getPhaseType() != null;
+    }
+
     @Override
     public DefaultPlan findCurrentPlan(final String planName) throws CatalogApiException {
         final Matcher m = DefaultPriceOverride.CUSTOM_PLAN_NAME_PATTERN.matcher(planName);
         if (m.matches()) {
-            final DefaultPlan plan = maybeGetOverriddenPlan(planName);
-            if (plan != null) {
-                return plan;
-            }
+            final InternalTenantContext internalTenantContext = createInternalTenantContext();
+            return priceOverride.getOverriddenPlan(planName, this, internalTenantContext);
         }
         return super.findCurrentPlan(planName);
     }
@@ -111,51 +119,14 @@ public class StandaloneCatalogWithPriceOverride extends StandaloneCatalog implem
         final String planName = DefaultPlanPhase.planName(phaseName);
         final Matcher m = DefaultPriceOverride.CUSTOM_PLAN_NAME_PATTERN.matcher(planName);
         if (m.matches()) {
-            final DefaultPlan plan = maybeGetOverriddenPlan(planName);
-            if (plan != null) {
-                return plan.findPhase(phaseName);
-            }
+            final InternalTenantContext internalTenantContext = createInternalTenantContext();
+            final Plan plan = priceOverride.getOverriddenPlan(planName, this, internalTenantContext);
+            return plan.findPhase(phaseName);
         }
         return super.findCurrentPhase(phaseName);
     }
 
-    private DefaultPlan maybeGetOverriddenPlan(final String planName) throws CatalogApiException {
-        final InternalTenantContext internalTenantContext = createInternalTenantContext();
-
-        try {
-            return priceOverride.getOverriddenPlan(planName, this, internalTenantContext);
-        } catch (final RuntimeException e) {
-            if (e.getCause() == null ||
-                e.getCause().getCause() == null ||
-                !(e.getCause().getCause() instanceof CatalogApiException) ||
-                ((CatalogApiException) e.getCause().getCause()).getCode() != ErrorCode.CAT_NO_SUCH_PLAN.getCode()) {
-                throw e;
-            } else {
-                // Otherwise, ambiguous name? See https://github.com/killbill/killbill/issues/842.
-                return null;
-            }
-        }
-    }
-
     private InternalTenantContext createInternalTenantContext() {
         return internalCallContextFactory.createInternalTenantContext(tenantRecordId, null);
-    }
-
-    public void initialize(final StandaloneCatalog catalog, final PriceOverride priceOverride, final InternalCallContextFactory internalCallContextFactory) {
-        super.initialize(catalog);
-        this.priceOverride = priceOverride;
-        this.internalCallContextFactory = internalCallContextFactory;
-    }
-
-    @Override
-    public void writeExternal(final ObjectOutput out) throws IOException {
-        super.writeExternal(out);
-        out.writeLong(tenantRecordId);
-    }
-
-    @Override
-    public void readExternal(final ObjectInput in) throws IOException, ClassNotFoundException {
-        super.readExternal(in);
-        this.tenantRecordId = in.readLong();
     }
 }

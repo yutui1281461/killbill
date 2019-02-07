@@ -190,9 +190,8 @@ public class TestTimeAwareContext extends UtilTestSuiteNoDB {
     private void refreshCallContext(final DateTime effectiveDateTime, final DateTimeZone timeZone) {
         final Account account = new MockAccountBuilder().timeZone(timeZone)
                                                         .createdDate(effectiveDateTime)
-                                                        .referenceTime(effectiveDateTime)
                                                         .build();
         internalCallContext.setFixedOffsetTimeZone(AccountDateTimeUtils.getFixedOffsetTimeZone(account));
-        internalCallContext.setReferenceTime(account.getReferenceTime());
+        internalCallContext.setReferenceTime(AccountDateTimeUtils.getReferenceDateTime(account));
     }
 }

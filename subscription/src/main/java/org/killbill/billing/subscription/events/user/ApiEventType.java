@@ -44,12 +44,6 @@ public enum ApiEventType {
             return SubscriptionBaseTransitionType.CANCEL;
         }
     },
-    UNDO_CHANGE {
-        @Override
-        public SubscriptionBaseTransitionType getSubscriptionTransitionType() {
-            return SubscriptionBaseTransitionType.UNDO_CHANGE;
-        }
-    },
     UNCANCEL {
         @Override
         public SubscriptionBaseTransitionType getSubscriptionTransitionType() {

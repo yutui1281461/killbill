@@ -32,6 +32,7 @@ import com.google.inject.Inject;
 
 public class DefaultInvoiceService implements InvoiceService {
 
+    public static final String INVOICE_SERVICE_NAME = "invoice-service";
     private final NextBillingDateNotifier dateNotifier;
     private final InvoiceListener invoiceListener;
     private final InvoiceTagHandler tagHandler;
@@ -50,12 +51,7 @@ public class DefaultInvoiceService implements InvoiceService {
 
     @Override
     public String getName() {
-        return KILLBILL_SERVICES.INVOICE_SERVICE.getServiceName();
-    }
-
-    @Override
-    public int getRegistrationOrdering() {
-        return KILLBILL_SERVICES.INVOICE_SERVICE.getRegistrationOrdering();
+        return INVOICE_SERVICE_NAME;
     }
 
     @LifecycleHandlerType(LifecycleHandlerType.LifecycleLevel.INIT_SERVICE)

@@ -16,6 +16,7 @@
 
 package org.killbill.billing.util.audit;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -34,7 +35,7 @@ public class DefaultAccountAuditLogs implements AccountAuditLogs {
 
     private final UUID accountId;
     private final AuditLevel auditLevel;
-    private final List<AuditLog> accountAuditLogs;
+    private final Collection<AuditLog> accountAuditLogs;
 
     private final Map<ObjectType, DefaultAccountAuditLogsForObjectType> auditLogsCache = new HashMap<ObjectType, DefaultAccountAuditLogsForObjectType>();
 
@@ -132,11 +133,6 @@ public class DefaultAccountAuditLogs implements AccountAuditLogs {
 
         // Should never be null
         return auditLogsCache.get(objectType);
-    }
-
-    @Override
-    public List<AuditLog> getAuditLogs() {
-        return accountAuditLogs;
     }
 
     private final class ObjectTypeFilter extends AbstractIterator<AuditLog> {

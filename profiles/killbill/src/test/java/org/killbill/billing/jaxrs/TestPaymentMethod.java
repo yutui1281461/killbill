@@ -20,25 +20,19 @@ package org.killbill.billing.jaxrs;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 
 import org.killbill.billing.ObjectType;
+import org.killbill.billing.client.model.Account;
+import org.killbill.billing.client.model.CustomField;
 import org.killbill.billing.client.model.CustomFields;
+import org.killbill.billing.client.model.PaymentMethod;
 import org.killbill.billing.client.model.PaymentMethods;
-import org.killbill.billing.client.model.gen.Account;
-import org.killbill.billing.client.model.gen.AuditLog;
-import org.killbill.billing.client.model.gen.CustomField;
-import org.killbill.billing.client.model.gen.PaymentMethod;
-import org.killbill.billing.client.model.gen.PluginProperty;
+import org.killbill.billing.client.model.PluginProperty;
 import org.killbill.billing.util.api.AuditLevel;
-import org.killbill.billing.util.audit.ChangeType;
 import org.testng.Assert;
 import org.testng.annotations.Test;
-
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
 
 public class TestPaymentMethod extends TestJaxrsBase {
 
@@ -47,20 +41,20 @@ public class TestPaymentMethod extends TestJaxrsBase {
 
         final Account accountJson = createAccountWithDefaultPaymentMethod("foo");
 
-        final PaymentMethod paymentMethodJson1 = paymentMethodApi.getPaymentMethodByKey("foo", NULL_PLUGIN_PROPERTIES, requestOptions);
+        final PaymentMethod paymentMethodJson1 = killBillClient.getPaymentMethodByKey("foo", true);
 
-        final PaymentMethod paymentMethodJson2 = paymentMethodApi.getPaymentMethod(accountJson.getPaymentMethodId(), NULL_PLUGIN_PROPERTIES, requestOptions);
+        final PaymentMethod paymentMethodJson2 = killBillClient.getPaymentMethod(accountJson.getPaymentMethodId(), true);
         Assert.assertEquals(paymentMethodJson1, paymentMethodJson2);
 
-        final PaymentMethod paymentMethodJson3 = paymentMethodApi.getPaymentMethodByKey("doesnotexist", NULL_PLUGIN_PROPERTIES, requestOptions);
+        final PaymentMethod paymentMethodJson3 = killBillClient.getPaymentMethodByKey("doesnotexist", true);
         Assert.assertNull(paymentMethodJson3);
     }
 
     @Test(groups = "slow", description = "Can search payment methods")
     public void testSearchPaymentMethods() throws Exception {
         // Search random key
-        Assert.assertEquals(paymentMethodApi.searchPaymentMethods(UUID.randomUUID().toString(), null, NULL_PLUGIN_PROPERTIES, requestOptions).size(), 0);
-        Assert.assertEquals(paymentMethodApi.searchPaymentMethods(UUID.randomUUID().toString(), PLUGIN_NAME, NULL_PLUGIN_PROPERTIES, requestOptions).size(), 0);
+        Assert.assertEquals(killBillClient.searchPaymentMethodsByKey(UUID.randomUUID().toString()).size(), 0);
+        Assert.assertEquals(killBillClient.searchPaymentMethodsByKeyAndPlugin(UUID.randomUUID().toString(), PLUGIN_NAME).size(), 0);
 
         // Create a payment method
         final List<PluginProperty> pmProperties = new ArrayList<PluginProperty>();
@@ -71,11 +65,11 @@ public class TestPaymentMethod extends TestJaxrsBase {
         pmProperties.add(new PluginProperty("CC_COUNTRY", "Zimbawe", false));
 
         final Account accountJson = createAccountWithDefaultPaymentMethod(UUID.randomUUID().toString(), pmProperties);
-        final PaymentMethod paymentMethodJson = paymentMethodApi.getPaymentMethod(accountJson.getPaymentMethodId(), false, true, NULL_PLUGIN_PROPERTIES, AuditLevel.NONE, requestOptions);
+        final PaymentMethod paymentMethodJson = killBillClient.getPaymentMethod(accountJson.getPaymentMethodId(), true);
 
         // Search random key again
-        Assert.assertEquals(paymentMethodApi.searchPaymentMethods(UUID.randomUUID().toString(), null, NULL_PLUGIN_PROPERTIES, requestOptions).size(), 0);
-        Assert.assertEquals(paymentMethodApi.searchPaymentMethods(UUID.randomUUID().toString(), PLUGIN_NAME, NULL_PLUGIN_PROPERTIES, requestOptions).size(), 0);
+        Assert.assertEquals(killBillClient.searchPaymentMethodsByKey(UUID.randomUUID().toString()).size(), 0);
+        Assert.assertEquals(killBillClient.searchPaymentMethodsByKeyAndPlugin(UUID.randomUUID().toString(), PLUGIN_NAME).size(), 0);
 
         // Last 4
         doSearch("4365", paymentMethodJson);
@@ -95,10 +89,10 @@ public class TestPaymentMethod extends TestJaxrsBase {
             createAccountWithDefaultPaymentMethod();
         }
 
-        final PaymentMethods allPaymentMethods = paymentMethodApi.getPaymentMethods(null, NULL_PLUGIN_PROPERTIES, requestOptions);
+        final PaymentMethods allPaymentMethods = killBillClient.getPaymentMethods();
         Assert.assertEquals(allPaymentMethods.size(), 5);
 
-        PaymentMethods page = paymentMethodApi.getPaymentMethods(0L, 1L, null, false, NULL_PLUGIN_PROPERTIES, AuditLevel.NONE, requestOptions);
+        PaymentMethods page = killBillClient.getPaymentMethods(0L, 1L);
         for (int i = 0; i < 5; i++) {
             Assert.assertNotNull(page);
             Assert.assertEquals(page.size(), 1);
@@ -118,11 +112,9 @@ public class TestPaymentMethod extends TestJaxrsBase {
         customField.setObjectType(ObjectType.PAYMENT_METHOD);
         customField.setName("testKey");
         customField.setValue("testValue");
-        final CustomFields body = new CustomFields();
-        body.add(customField);
 
         // Create custom field
-        final CustomFields createdCustomFields = paymentMethodApi.createPaymentMethodCustomFields(paymentMethodId, body, requestOptions);
+        final CustomFields createdCustomFields = killBillClient.createPaymentMethodCustomField(paymentMethodId, customField, createdBy, reason, comment);
         Assert.assertEquals(createdCustomFields.size(), 1);
         final CustomField createdCustomField = createdCustomFields.get(0);
         Assert.assertEquals(createdCustomField.getName(), "testKey");
@@ -131,7 +123,7 @@ public class TestPaymentMethod extends TestJaxrsBase {
         Assert.assertEquals(createdCustomField.getObjectType(), ObjectType.PAYMENT_METHOD);
 
         // Retrieve custom field
-        final CustomFields retrievedCustomFields = paymentMethodApi.getPaymentMethodCustomFields(paymentMethodId, requestOptions);
+        final CustomFields retrievedCustomFields = killBillClient.getPaymentMethodCustomFields(paymentMethodId, AuditLevel.NONE);
         Assert.assertEquals(retrievedCustomFields.size(), 1);
         final CustomField retrievedCustomField = retrievedCustomFields.get(0);
         Assert.assertEquals(retrievedCustomField.getName(), "testKey");
@@ -140,33 +132,17 @@ public class TestPaymentMethod extends TestJaxrsBase {
         Assert.assertEquals(retrievedCustomField.getObjectType(), ObjectType.PAYMENT_METHOD);
 
         // Delete custom field
-        paymentMethodApi.deletePaymentMethodCustomFields(paymentMethodId, Collections.<UUID>singletonList(createdCustomField.getCustomFieldId()), requestOptions);
-        final CustomFields deletedCustomFields = paymentMethodApi.getPaymentMethodCustomFields(paymentMethodId, requestOptions);
+        killBillClient.deletePaymentMethodCustomFields(paymentMethodId, Collections.<UUID>singletonList(createdCustomField.getCustomFieldId()), createdBy, reason, comment);
+        final CustomFields deletedCustomFields = killBillClient.getPaymentMethodCustomFields(paymentMethodId, AuditLevel.NONE);
         Assert.assertEquals(deletedCustomFields.size(), 0);
     }
 
-    @Test(groups = "slow", description = "retrieve account logs")
-    public void testPaymentMethodAuditLogsWithHistory() throws Exception {
-        final Account account = createAccountWithDefaultPaymentMethod();
-        assertNotNull(account);
-        final UUID paymentMethodId = account.getPaymentMethodId();
-        final List<AuditLog> paymentMethodAuditLogWithHistory = paymentMethodApi.getPaymentMethodAuditLogsWithHistory(paymentMethodId, requestOptions);
-        assertEquals(paymentMethodAuditLogWithHistory.size(), 1);
-        assertEquals(paymentMethodAuditLogWithHistory.get(0).getChangeType(), ChangeType.INSERT.toString());
-        assertEquals(paymentMethodAuditLogWithHistory.get(0).getObjectType(), ObjectType.PAYMENT_METHOD);
-        assertEquals(paymentMethodAuditLogWithHistory.get(0).getObjectId(), paymentMethodId);
-
-        final LinkedHashMap history1 = (LinkedHashMap) paymentMethodAuditLogWithHistory.get(0).getHistory();
-        assertNotNull(history1);
-        assertEquals(history1.get("accountId"), account.getAccountId().toString());
-    }
-
     private void doSearch(final String searchKey, final PaymentMethod paymentMethodJson) throws Exception {
-        final List<PaymentMethod> results1 = paymentMethodApi.searchPaymentMethods(searchKey, 0L, 100L, null, true, NULL_PLUGIN_PROPERTIES,  AuditLevel.NONE,  requestOptions);
+        final List<PaymentMethod> results1 = killBillClient.searchPaymentMethodsByKey(searchKey, true);
         Assert.assertEquals(results1.size(), 1);
         Assert.assertEquals(results1.get(0), paymentMethodJson);
 
-        final List<PaymentMethod> results2 = paymentMethodApi.searchPaymentMethods(searchKey, 0L, 100L, PLUGIN_NAME, true, NULL_PLUGIN_PROPERTIES, AuditLevel.NONE, requestOptions);
+        final List<PaymentMethod> results2 = killBillClient.searchPaymentMethodsByKeyAndPlugin(searchKey, PLUGIN_NAME);
         Assert.assertEquals(results2.size(), 1);
         Assert.assertEquals(results2.get(0), paymentMethodJson);
     }

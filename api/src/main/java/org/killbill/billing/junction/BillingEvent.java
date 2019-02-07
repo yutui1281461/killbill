@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2017 Groupon, Inc
+ * Copyright 2014-2017 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -22,7 +22,6 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import org.joda.time.DateTime;
-import org.killbill.billing.catalog.api.BillingAlignment;
 import org.killbill.billing.catalog.api.BillingPeriod;
 import org.killbill.billing.catalog.api.CatalogApiException;
 import org.killbill.billing.catalog.api.Currency;
@@ -34,17 +33,13 @@ import org.killbill.billing.subscription.api.SubscriptionBaseTransitionType;
 
 public interface BillingEvent extends Comparable<BillingEvent> {
 
-    /**
-     * @return the billCycleDay in the account timezone as seen for that subscription at that time
-     * <p/>
-     * Note: The billCycleDay may come from the Account, or the bundle or the subscription itself
-     */
-    int getBillCycleDayLocal();
 
     /**
-     * @return the BillingAlignment for this transition
+     * @return the billCycleDay in the account timezone as seen for that subscription at that time
+     *         <p/>
+     *         Note: The billCycleDay may come from the Account, or the bundle or the subscription itself
      */
-    BillingAlignment getBillingAlignment();
+    int getBillCycleDayLocal();
 
     /**
      * @return the subscription
@@ -102,13 +97,9 @@ public interface BillingEvent extends Comparable<BillingEvent> {
     Long getTotalOrdering();
 
     /**
+     *
      * @return the list of {@code Usage} section
      */
     List<Usage> getUsages();
 
-    /**
-     *
-     * @return the catalog version (effective date) associated with this billing event.
-     */
-    public DateTime getCatalogEffectiveDate();
 }

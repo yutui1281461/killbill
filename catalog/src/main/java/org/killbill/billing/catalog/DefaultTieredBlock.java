@@ -1,8 +1,7 @@
 /*
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014 The Billing Project, LLC
  *
- * The Billing Project licenses this file to you under the Apache License, version 2.0
+ * Ning licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
  * License.  You may obtain a copy of the License at:
  *
@@ -17,22 +16,15 @@
 
 package org.killbill.billing.catalog;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
-
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 
 import org.killbill.billing.catalog.api.BlockType;
-import org.killbill.billing.catalog.api.Currency;
 import org.killbill.billing.catalog.api.TieredBlock;
-import org.killbill.billing.catalog.api.TieredBlockPriceOverride;
 
 @XmlAccessorType(XmlAccessType.NONE)
-public class DefaultTieredBlock extends DefaultBlock implements TieredBlock, Externalizable {
+public class DefaultTieredBlock extends DefaultBlock implements TieredBlock {
 
     @XmlElement(required = true)
     private Double max;
@@ -45,15 +37,6 @@ public class DefaultTieredBlock extends DefaultBlock implements TieredBlock, Ext
     public DefaultTieredBlock setMax(final Double max) {
         this.max = max;
         return this;
-    }
-
-    // Required for deserialization
-    public DefaultTieredBlock() {
-    }
-
-    public DefaultTieredBlock(TieredBlock in, TieredBlockPriceOverride override, Currency currency) {
-        super((DefaultUnit) in.getUnit(), in.getSize(), (DefaultInternationalPrice) in.getPrice(), override.getPrice(), currency);
-        this.max = in.getMax();
     }
 
     @Override
@@ -93,17 +76,5 @@ public class DefaultTieredBlock extends DefaultBlock implements TieredBlock, Ext
         int result = super.hashCode();
         result = 31 * result + (max != null ? max.hashCode() : 0);
         return result;
-    }
-
-    @Override
-    public void writeExternal(final ObjectOutput out) throws IOException {
-        super.writeExternal(out);
-        out.writeDouble(max);
-    }
-
-    @Override
-    public void readExternal(final ObjectInput in) throws IOException, ClassNotFoundException {
-        super.readExternal(in);
-        this.max = in.readDouble();
     }
 }

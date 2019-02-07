@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2015 Groupon, Inc
+ * Copyright 2014-2015 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -26,15 +26,12 @@ import org.killbill.billing.payment.core.sm.PluginControlPaymentAutomatonRunner;
 import org.killbill.billing.payment.dao.MockPaymentDao;
 import org.killbill.billing.payment.dao.PaymentDao;
 import org.killbill.billing.platform.api.KillbillConfigSource;
-import org.killbill.clock.ClockMock;
+import org.killbill.clock.Clock;
 
 public class TestPaymentModuleNoDB extends TestPaymentModule {
 
-    private final ClockMock clock;
-
-    public TestPaymentModuleNoDB(final KillbillConfigSource configSource, final ClockMock clock) {
+    public TestPaymentModuleNoDB(final KillbillConfigSource configSource, final Clock clock) {
         super(configSource, clock);
-        this.clock = clock;
     }
 
     @Override
@@ -44,7 +41,7 @@ public class TestPaymentModuleNoDB extends TestPaymentModule {
 
     @Override
     protected void configure() {
-        install(new GuicyKillbillTestNoDBModule(configSource, clock));
+        install(new GuicyKillbillTestNoDBModule(configSource));
         install(new MockNonEntityDaoModule(configSource));
         install(new MockAccountModule(configSource));
         super.configure();

@@ -1,9 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
  *
- * The Billing Project licenses this file to you under the Apache License, version 2.0
+ * Ning licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
  * License.  You may obtain a copy of the License at:
  *
@@ -18,10 +16,7 @@
 
 package org.killbill.billing.catalog;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
+import java.net.URI;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -30,6 +25,7 @@ import javax.xml.bind.annotation.XmlElement;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.joda.time.Period;
+
 import org.killbill.billing.ErrorCode;
 import org.killbill.billing.catalog.api.CatalogApiException;
 import org.killbill.billing.catalog.api.Duration;
@@ -39,7 +35,7 @@ import org.killbill.xmlloader.ValidationError;
 import org.killbill.xmlloader.ValidationErrors;
 
 @XmlAccessorType(XmlAccessType.NONE)
-public class DefaultDuration extends ValidatingConfig<StandaloneCatalog> implements Duration, Externalizable {
+public class DefaultDuration extends ValidatingConfig<StandaloneCatalog> implements Duration {
 
     @XmlElement(required = true)
     private TimeUnit unit;
@@ -47,17 +43,22 @@ public class DefaultDuration extends ValidatingConfig<StandaloneCatalog> impleme
     @XmlElement(required = false)
     private Integer number;
 
+    /* (non-Javadoc)
+      * @see org.killbill.billing.catalog.IDuration#getUnit()
+      */
     @Override
     public TimeUnit getUnit() {
         return unit;
     }
 
+    /* (non-Javadoc)
+	 * @see org.killbill.billing.catalog.IDuration#getLength()
+	 */
     @Override
     public int getNumber() {
         return number;
     }
 
-    // Required for deserialization
     public DefaultDuration() {
     }
 
@@ -114,19 +115,20 @@ public class DefaultDuration extends ValidatingConfig<StandaloneCatalog> impleme
         //Validation: TimeUnit UNLIMITED if number == -1
         if ((unit == TimeUnit.UNLIMITED && !CatalogSafetyInitializer.DEFAULT_NON_REQUIRED_INTEGER_FIELD_VALUE.equals(number))) {
             errors.add(new ValidationError("Duration can only have 'UNLIMITED' unit if the number is omitted",
-                                           DefaultDuration.class, ""));
+                                           catalog.getCatalogURI(), DefaultDuration.class, ""));
         } else if ((unit != TimeUnit.UNLIMITED) && CatalogSafetyInitializer.DEFAULT_NON_REQUIRED_INTEGER_FIELD_VALUE.equals(number)) {
             errors.add(new ValidationError("Finite Duration must have a well defined length",
-                                           DefaultDuration.class, ""));
+                                           catalog.getCatalogURI(), DefaultDuration.class, ""));
         }
         return errors;
     }
 
     @Override
-    public void initialize(final StandaloneCatalog root) {
-        super.initialize(root);
+    public void initialize(final StandaloneCatalog root, final URI uri) {
+        super.initialize(root, uri);
         CatalogSafetyInitializer.initializeNonRequiredNullFieldsWithDefaultValue(this);
     }
+
 
     public DefaultDuration setUnit(final TimeUnit unit) {
         this.unit = unit;
@@ -155,7 +157,7 @@ public class DefaultDuration extends ValidatingConfig<StandaloneCatalog> impleme
                 return new Period().withYears(number);
             case UNLIMITED:
             default:
-                throw new IllegalStateException("Unexpected duration unit " + unit);
+                throw new  IllegalStateException("Unexpected duration unit " + unit);
         }
     }
 
@@ -185,20 +187,5 @@ public class DefaultDuration extends ValidatingConfig<StandaloneCatalog> impleme
         int result = unit != null ? unit.hashCode() : 0;
         result = 31 * result + (number != null ? number.hashCode() : 0);
         return result;
-    }
-
-    @Override
-    public void writeExternal(final ObjectOutput out) throws IOException {
-        out.writeBoolean(unit != null);
-        if (unit != null) {
-            out.writeUTF(unit.name());
-        }
-        out.writeInt(number);
-    }
-
-    @Override
-    public void readExternal(final ObjectInput in) throws IOException, ClassNotFoundException {
-        this.unit = in.readBoolean() ? TimeUnit.valueOf(in.readUTF()) : null;
-        this.number = in.readInt();
     }
 }

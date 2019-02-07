@@ -26,14 +26,16 @@ import org.killbill.billing.util.entity.dao.TimeZoneAwareEntity;
 public abstract class AccountDateTimeUtils {
 
     public static DateTimeZone getFixedOffsetTimeZone(final TimeZoneAwareEntity account) {
-        return getFixedOffsetTimeZone(account.getTimeZone(), account.getReferenceTime());
+        return getFixedOffsetTimeZone(account.getTimeZone(), account);
     }
 
     public static DateTimeZone getFixedOffsetTimeZone(final Account account) {
-        return getFixedOffsetTimeZone(account.getTimeZone(), account.getReferenceTime());
+        return getFixedOffsetTimeZone(account.getTimeZone(), account);
     }
 
-    private static DateTimeZone getFixedOffsetTimeZone(final DateTimeZone referenceDateTimeZone, final DateTime referenceDateTime) {
+    public static DateTimeZone getFixedOffsetTimeZone(final DateTimeZone referenceDateTimeZone, final Entity account) {
+        final DateTime referenceDateTime = getReferenceDateTime(account);
+
         // Check if DST was in effect at the reference date time
         final boolean shouldUseDST = !referenceDateTimeZone.isStandardOffset(referenceDateTime.getMillis());
         if (shouldUseDST) {
@@ -41,5 +43,9 @@ public abstract class AccountDateTimeUtils {
         } else {
             return DateTimeZone.forOffsetMillis(referenceDateTimeZone.getStandardOffset(referenceDateTime.getMillis()));
         }
+    }
+
+    public static DateTime getReferenceDateTime(final Entity account) {
+        return account.getCreatedDate();
     }
 }

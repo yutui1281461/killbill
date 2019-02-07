@@ -19,14 +19,11 @@ package org.killbill.billing.jaxrs.json;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.UUID;
 
 import javax.annotation.Nullable;
 
 import org.joda.time.DateTime;
-import org.killbill.billing.catalog.api.Currency;
 import org.killbill.billing.payment.api.PaymentAttempt;
-import org.killbill.billing.payment.api.TransactionType;
 import org.killbill.billing.util.audit.AuditLog;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -34,37 +31,41 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-@ApiModel(value="PaymentAttempt", parent = JsonBase.class)
+@ApiModel(description = "Payment attempt")
 public class PaymentAttemptJson extends JsonBase {
 
-    private final UUID accountId;
-    private final UUID paymentMethodId;
+    @ApiModelProperty(dataType = "java.util.UUID")
+    private final String accountId;
+    @ApiModelProperty(dataType = "java.util.UUID")
+    private final String paymentMethodId;
     private final String paymentExternalKey;
-    private final UUID transactionId;
+    @ApiModelProperty(dataType = "java.util.UUID")
+    private final String transactionId;
     private final String transactionExternalKey;
-    private final TransactionType transactionType;
+    @ApiModelProperty(dataType = "org.killbill.billing.payment.api.TransactionType")
+    private final String transactionType;
     @ApiModelProperty(dataType = "org.joda.time.DateTime")
     private final DateTime effectiveDate;
     private final String stateName;
     @ApiModelProperty(value = "Transaction amount, required except for void operations")
     private final BigDecimal amount;
     @ApiModelProperty(value = "Amount currency (account currency unless specified)", dataType = "org.killbill.billing.catalog.api.Currency")
-    private final Currency currency;
+    private final String currency;
     // Plugin specific fields
     private final String pluginName;
     private final List<PluginPropertyJson> pluginProperties;
 
     @JsonCreator
-    public PaymentAttemptJson(@JsonProperty("accountId") final UUID accountId,
-                              @JsonProperty("paymentMethodId") final UUID paymentMethodId,
+    public PaymentAttemptJson(@JsonProperty("accountId") final String accountId,
+                              @JsonProperty("paymentMethodId") final String paymentMethodId,
                               @JsonProperty("paymentExternalKey") final String paymentExternalKey,
-                              @JsonProperty("transactionId") final UUID transactionId,
+                              @JsonProperty("transactionId") final String transactionId,
                               @JsonProperty("transactionExternalKey") final String transactionExternalKey,
-                              @JsonProperty("transactionType") final TransactionType transactionType,
+                              @JsonProperty("transactionType") final String transactionType,
                               @JsonProperty("effectiveDate") final DateTime effectiveDate,
                               @JsonProperty("stateName") final String stateName,
                               @JsonProperty("amount") final BigDecimal amount,
-                              @JsonProperty("currency") final Currency currency,
+                              @JsonProperty("currency") final String currency,
                               @JsonProperty("pluginName") final String pluginName,
                               @JsonProperty("pluginProperties") final List<PluginPropertyJson> pluginProperties,
                               @JsonProperty("auditLogs") @Nullable final List<AuditLogJson> auditLogs) {
@@ -84,27 +85,27 @@ public class PaymentAttemptJson extends JsonBase {
     }
 
     public PaymentAttemptJson(final PaymentAttempt paymentAttempt, final String paymentExternalKey, @Nullable final List<AuditLog> attemptsLogs) {
-        this(paymentAttempt.getAccountId(),
+        this(paymentAttempt.getAccountId().toString(),
              // Could be null if aborted in the priorCall
-             paymentAttempt.getPaymentMethodId(),
+             paymentAttempt.getPaymentMethodId() != null ? paymentAttempt.getPaymentMethodId().toString() : null,
              paymentExternalKey,
-             paymentAttempt.getTransactionId(),
+             paymentAttempt.getTransactionId() != null ? paymentAttempt.getTransactionId().toString() : null,
              paymentAttempt.getTransactionExternalKey(),
-             paymentAttempt.getTransactionType(),
+             paymentAttempt.getTransactionType().toString(),
              paymentAttempt.getEffectiveDate(),
              paymentAttempt.getStateName(),
              paymentAttempt.getAmount(),
-             paymentAttempt.getCurrency() != null ? paymentAttempt.getCurrency() : null,
+             paymentAttempt.getCurrency() != null ? paymentAttempt.getCurrency().toString() : null,
              paymentAttempt.getPluginName(),
              paymentAttempt.getPluginProperties() == null ? null : toPluginPropertyJson(paymentAttempt.getPluginProperties()),
              toAuditLogJson(attemptsLogs));
     }
 
-    public UUID getAccountId() {
+    public String getAccountId() {
         return accountId;
     }
 
-    public UUID getPaymentMethodId() {
+    public String getPaymentMethodId() {
         return paymentMethodId;
     }
 
@@ -112,7 +113,7 @@ public class PaymentAttemptJson extends JsonBase {
         return paymentExternalKey;
     }
 
-    public UUID getTransactionId() {
+    public String getTransactionId() {
         return transactionId;
     }
 
@@ -120,7 +121,7 @@ public class PaymentAttemptJson extends JsonBase {
         return transactionExternalKey;
     }
 
-    public TransactionType getTransactionType() {
+    public String getTransactionType() {
         return transactionType;
     }
 
@@ -136,7 +137,7 @@ public class PaymentAttemptJson extends JsonBase {
         return amount;
     }
 
-    public Currency getCurrency() {
+    public String getCurrency() {
         return currency;
     }
 

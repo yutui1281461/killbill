@@ -38,19 +38,13 @@ public class UsageUtils {
         Preconditions.checkArgument(usage.getBillingMode() == BillingMode.IN_ARREAR && usage.getUsageType() == UsageType.CONSUMABLE);
         Preconditions.checkArgument(usage.getTiers().length > 0);
 
-
         final List<TieredBlock> result = Lists.newLinkedList();
         for (Tier tier : usage.getTiers()) {
-            boolean found = false;
             for (TieredBlock tierBlock : tier.getTieredBlocks()) {
                 if (tierBlock.getUnit().getName().equals(unitType)) {
                     result.add(tierBlock);
-                    found = true;
-                    break;
                 }
             }
-            // We expect this method to return an ordered list of TieredBlock, each for each tier.
-            Preconditions.checkState(found, "Catalog issue in usage section '%s': Missing tierBlock definition for unit '%s'", usage.getName(), unitType);
         }
         return result;
     }
@@ -69,12 +63,14 @@ public class UsageUtils {
         return result;
     }
 
+
     public static List<Tier> getCapacityInArrearTier(final Usage usage) {
 
         Preconditions.checkArgument(usage.getBillingMode() == BillingMode.IN_ARREAR && usage.getUsageType() == UsageType.CAPACITY);
         Preconditions.checkArgument(usage.getTiers().length > 0);
         return ImmutableList.copyOf(usage.getTiers());
     }
+
 
     public static Set<String> getCapacityInArrearUnitTypes(final Usage usage) {
 
@@ -89,5 +85,6 @@ public class UsageUtils {
         }
         return result;
     }
+
 
 }

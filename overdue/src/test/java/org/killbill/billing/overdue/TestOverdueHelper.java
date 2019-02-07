@@ -34,13 +34,11 @@ import org.killbill.billing.entitlement.api.BlockingState;
 import org.killbill.billing.invoice.api.Invoice;
 import org.killbill.billing.invoice.api.InvoiceInternalApi;
 import org.killbill.billing.invoice.api.InvoiceItem;
-import org.killbill.billing.invoice.api.InvoiceStatus;
 import org.killbill.billing.junction.BlockingInternalApi;
 import org.killbill.billing.overdue.api.OverdueState;
 import org.killbill.billing.overdue.glue.TestOverdueModule.ApplicatorBlockingApi;
 import org.killbill.billing.subscription.api.user.SubscriptionBaseApiException;
 import org.killbill.billing.tag.TagInternalApi;
-import org.killbill.billing.util.tag.ControlTagType;
 import org.killbill.billing.util.tag.Tag;
 import org.mockito.Mockito;
 import org.testng.Assert;
@@ -133,7 +131,6 @@ public class TestOverdueHelper {
         final Invoice invoice = Mockito.mock(Invoice.class);
         Mockito.when(invoice.getInvoiceDate()).thenReturn(dateOfLastUnPaidInvoice);
         Mockito.when(invoice.getBalance()).thenReturn(BigDecimal.TEN);
-        Mockito.when(invoice.getStatus()).thenReturn(InvoiceStatus.COMMITTED);
         Mockito.when(invoice.getId()).thenReturn(UUID.randomUUID());
 
         final InvoiceItem item = Mockito.mock(InvoiceItem.class);
@@ -149,7 +146,7 @@ public class TestOverdueHelper {
         final Tag tag = Mockito.mock(Tag.class);
         Mockito.when(tag.getObjectId()).thenReturn(accountId);
         Mockito.when(tag.getObjectType()).thenReturn(ObjectType.ACCOUNT);
-        Mockito.when(tag.getTagDefinitionId()).thenReturn(ControlTagType.TEST.getId());
+        Mockito.when(tag.getTagDefinitionId()).thenReturn(new UUID(0, 6));
         final List<Tag> tags = new ArrayList<Tag>();
         tags.add(tag);
         Mockito.when(tagInternalApi.getTags(Mockito.eq(account.getId()), Mockito.eq(ObjectType.ACCOUNT), Mockito.<InternalTenantContext>any()))

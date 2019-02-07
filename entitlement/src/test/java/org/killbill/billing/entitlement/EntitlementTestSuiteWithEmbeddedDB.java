@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2016 Groupon, Inc
+ * Copyright 2014-2016 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -18,7 +18,6 @@
 
 package org.killbill.billing.entitlement;
 
-import java.util.Map;
 import java.util.UUID;
 
 import org.apache.shiro.SecurityUtils;
@@ -125,26 +124,18 @@ public class EntitlementTestSuiteWithEmbeddedDB extends GuicyKillbillTestSuiteWi
     protected Catalog catalog;
 
     @Override
-    protected KillbillConfigSource getConfigSource(final Map<String, String> extraProperties) {
-        return getConfigSource("/entitlement.properties", extraProperties);
+    protected KillbillConfigSource getConfigSource() {
+        return getConfigSource("/entitlement.properties");
     }
 
     @BeforeClass(groups = "slow")
     protected void beforeClass() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
-        final Injector injector = Guice.createInjector(Stage.PRODUCTION, new TestEntitlementModuleWithEmbeddedDB(configSource, clock));
+        final Injector injector = Guice.createInjector(Stage.PRODUCTION, new TestEntitlementModuleWithEmbeddedDB(configSource));
         injector.injectMembers(this);
     }
 
     @BeforeMethod(groups = "slow")
     public void beforeMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         super.beforeMethod();
         startTestFamework(testListener, clock, busService, subscriptionBaseService, entitlementService);
         this.catalog = initCatalog(catalogService);
@@ -180,10 +171,6 @@ public class EntitlementTestSuiteWithEmbeddedDB extends GuicyKillbillTestSuiteWi
 
     @AfterMethod(groups = "slow")
     public void afterMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         securityApi.logout();
 
         stopTestFramework(testListener, busService, subscriptionBaseService, entitlementService);
@@ -235,6 +222,8 @@ public class EntitlementTestSuiteWithEmbeddedDB extends GuicyKillbillTestSuiteWi
     }
 
     private void resetClockToStartOfTest(final ClockMock clock) {
+        clock.resetDeltaFromReality();
+
         // Date at which all tests start-- we create the date object here after the system properties which set the JVM in UTC have been set.
         final DateTime testStartDate = new DateTime(2012, 5, 7, 0, 3, 42, 0);
         clock.setDeltaFromReality(testStartDate.getMillis() - clock.getUTCNow().getMillis());
@@ -271,17 +260,16 @@ public class EntitlementTestSuiteWithEmbeddedDB extends GuicyKillbillTestSuiteWi
     }
 
     protected AccountData getAccountData(final int billingDay) {
-
         return new MockAccountBuilder().name(UUID.randomUUID().toString().substring(1, 8))
                                        .firstNameLength(6)
                                        .email(UUID.randomUUID().toString().substring(1, 8))
                                        .phone(UUID.randomUUID().toString().substring(1, 8))
                                        .migrated(false)
+                                       .isNotifiedForInvoices(false)
                                        .externalKey(UUID.randomUUID().toString().substring(1, 8))
                                        .billingCycleDayLocal(billingDay)
                                        .currency(Currency.USD)
                                        .paymentMethodId(UUID.randomUUID())
-                                       .referenceTime(clock.getUTCNow())
                                        .timeZone(DateTimeZone.UTC)
                                        .build();
     }

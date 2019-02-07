@@ -50,8 +50,6 @@ public @interface Cachable {
     String OVERRIDDEN_PLAN_CACHE_NAME = "overridden-plan";
     String ACCOUNT_IMMUTABLE_CACHE_NAME = "account-immutable";
     String ACCOUNT_BCD_CACHE_NAME = "account-bcd";
-    String ACCOUNT_ID_FROM_BUNDLE_ID_CACHE_NAME = "account-id-from-bundle-id";
-    String BUNDLE_ID_FROM_SUBSCRIPTION_ID_CACHE_NAME = "bundle-id-from-subscription-id";
 
     CacheType value();
 
@@ -101,13 +99,7 @@ public @interface Cachable {
         ACCOUNT_IMMUTABLE(ACCOUNT_IMMUTABLE_CACHE_NAME, Long.class, ImmutableAccountData.class, false),
 
         /* Account BCD config cache */
-        ACCOUNT_BCD(ACCOUNT_BCD_CACHE_NAME, UUID.class, Integer.class, false),
-
-        /* Bundle id to Account id cache */
-        ACCOUNT_ID_FROM_BUNDLE_ID(ACCOUNT_ID_FROM_BUNDLE_ID_CACHE_NAME, UUID.class, UUID.class, false),
-
-        /* Entitlement id to Bundle id cache */
-        BUNDLE_ID_FROM_SUBSCRIPTION_ID(BUNDLE_ID_FROM_SUBSCRIPTION_ID_CACHE_NAME, UUID.class, UUID.class, false);
+        ACCOUNT_BCD(ACCOUNT_BCD_CACHE_NAME, UUID.class, Integer.class, false);
 
         private final String cacheName;
         private final Class keyType;

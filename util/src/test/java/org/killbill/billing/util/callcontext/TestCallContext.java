@@ -30,7 +30,6 @@ public class TestCallContext implements CallContext {
     private final DateTime updatedDate;
     private final DateTime createdDate;
     private final UUID userToken;
-    private final UUID accountId;
     private final UUID tenantId;
 
     public TestCallContext(final String userName) {
@@ -42,7 +41,6 @@ public class TestCallContext implements CallContext {
         this.createdDate = utcNow;
         this.updatedDate = utcNow;
         this.userToken = context.getUserToken();
-        this.accountId = context.getAccountId();
         this.tenantId = context.getTenantId();
     }
 
@@ -51,7 +49,6 @@ public class TestCallContext implements CallContext {
         this.createdDate = createdDate;
         this.updatedDate = updatedDate;
         this.userToken = UUID.randomUUID();
-        this.accountId = UUID.randomUUID();
         this.tenantId = UUID.randomUUID();
     }
 
@@ -93,11 +90,6 @@ public class TestCallContext implements CallContext {
     @Override
     public UUID getUserToken() {
         return userToken;
-    }
-
-    @Override
-    public UUID getAccountId() {
-        return accountId;
     }
 
     @Override

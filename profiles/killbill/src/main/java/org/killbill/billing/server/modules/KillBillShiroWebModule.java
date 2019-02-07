@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2017 Groupon, Inc
+ * Copyright 2014-2017 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -18,9 +18,6 @@
 
 package org.killbill.billing.server.modules;
 
-import java.util.Collection;
-import java.util.LinkedList;
-
 import javax.servlet.ServletContext;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -28,13 +25,9 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.shiro.authc.pam.ModularRealmAuthenticator;
 import org.apache.shiro.authc.pam.ModularRealmAuthenticatorWith540;
-import org.apache.shiro.authz.ModularRealmAuthorizer;
 import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.guice.web.ShiroWebModuleWith435;
-import org.apache.shiro.mgt.SubjectDAO;
-import org.apache.shiro.realm.Realm;
 import org.apache.shiro.session.mgt.SessionManager;
-import org.apache.shiro.session.mgt.eis.SessionDAO;
 import org.apache.shiro.web.filter.authc.BasicHttpAuthenticationFilter;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
 import org.apache.shiro.web.mgt.WebSecurityManager;
@@ -44,12 +37,11 @@ import org.killbill.billing.server.security.FirstSuccessfulStrategyWith540;
 import org.killbill.billing.server.security.KillBillWebSessionManager;
 import org.killbill.billing.server.security.KillbillJdbcTenantRealm;
 import org.killbill.billing.util.config.definition.RbacConfig;
-import org.killbill.billing.util.config.definition.RedisCacheConfig;
 import org.killbill.billing.util.glue.EhcacheShiroManagerProvider;
+import org.killbill.billing.util.glue.IniRealmProvider;
+import org.killbill.billing.util.glue.JDBCSessionDaoProvider;
 import org.killbill.billing.util.glue.KillBillShiroModule;
-import org.killbill.billing.util.glue.RealmsFromShiroIniProvider;
-import org.killbill.billing.util.glue.RedisShiroManagerProvider;
-import org.killbill.billing.util.glue.SessionDAOProvider;
+import org.killbill.billing.util.security.shiro.dao.JDBCSessionDao;
 import org.killbill.billing.util.security.shiro.realm.KillBillJdbcRealm;
 import org.killbill.billing.util.security.shiro.realm.KillBillJndiLdapRealm;
 import org.killbill.billing.util.security.shiro.realm.KillBillOktaRealm;
@@ -78,19 +70,8 @@ public class KillBillShiroWebModule extends ShiroWebModuleWith435 {
 
     @Override
     protected void configureShiroWeb() {
-        final RedisCacheConfig redisCacheConfig = new ConfigurationObjectFactory(new ConfigSource() {
-            @Override
-            public String getString(final String propertyName) {
-                return configSource.getString(propertyName);
-            }
-        }).build(RedisCacheConfig.class);
-
         // Magic provider to configure the cache manager
-        if (redisCacheConfig.isRedisCachingEnabled()) {
-            bind(CacheManager.class).toProvider(RedisShiroManagerProvider.class).asEagerSingleton();
-        } else {
-            bind(CacheManager.class).toProvider(EhcacheShiroManagerProvider.class).asEagerSingleton();
-        }
+        bind(CacheManager.class).toProvider(EhcacheShiroManagerProvider.class).asEagerSingleton();
 
         configureShiroForRBAC();
 
@@ -101,6 +82,8 @@ public class KillBillShiroWebModule extends ShiroWebModuleWith435 {
         final RbacConfig config = new ConfigurationObjectFactory(configSource).build(RbacConfig.class);
         bind(RbacConfig.class).toInstance(config);
 
+        // Note: order matters (the first successful match will win, see below)
+        bindRealm().toProvider(IniRealmProvider.class).asEagerSingleton();
         bindRealm().to(KillBillJdbcRealm.class).asEagerSingleton();
         if (KillBillShiroModule.isLDAPEnabled()) {
             bindRealm().to(KillBillJndiLdapRealm.class).asEagerSingleton();
@@ -119,7 +102,6 @@ public class KillBillShiroWebModule extends ShiroWebModuleWith435 {
 
         if (KillBillShiroModule.isRBACEnabled()) {
             addFilterChain(JaxrsResource.PREFIX + "/**", Key.get(CorsBasicHttpAuthenticationFilter.class));
-            addFilterChain(JaxrsResource.PLUGINS_PATH + "/**", Key.get(CorsBasicHttpAuthenticationOptionalFilter.class));
         }
     }
 
@@ -135,13 +117,11 @@ public class KillBillShiroWebModule extends ShiroWebModuleWith435 {
         // The default session timeout is 30 minutes.
         bind.to(KillBillWebSessionManager.class).asEagerSingleton();
 
-        bind(SubjectDAO.class).toProvider(KillBillWebSubjectDAOProvider.class).asEagerSingleton();
-
         // Magic provider to configure the session DAO
-        bind(SessionDAO.class).toProvider(SessionDAOProvider.class).asEagerSingleton();
+        bind(JDBCSessionDao.class).toProvider(JDBCSessionDaoProvider.class).asEagerSingleton();
     }
 
-    public static class CorsBasicHttpAuthenticationFilter extends BasicHttpAuthenticationFilter {
+    public static final class CorsBasicHttpAuthenticationFilter extends BasicHttpAuthenticationFilter {
 
         @Override
         protected boolean isAccessAllowed(final ServletRequest request, final ServletResponse response, final Object mappedValue) {
@@ -153,20 +133,7 @@ public class KillBillShiroWebModule extends ShiroWebModuleWith435 {
         }
     }
 
-    public static final class CorsBasicHttpAuthenticationOptionalFilter extends CorsBasicHttpAuthenticationFilter {
-
-        protected boolean onAccessDenied(final ServletRequest request, final ServletResponse response) throws Exception {
-            if (isLoginAttempt(request, response)) {
-                // Attempt to log-in
-                executeLogin(request, response);
-            }
-
-            // Unlike the original method, we don't send a challenge on failure but simply allow the request to continue
-            return true;
-        }
-    }
-
-    private final class DefaultWebSecurityManagerTypeListener implements TypeListener {
+    private static final class DefaultWebSecurityManagerTypeListener implements TypeListener {
 
         @Override
         public <I> void hear(final TypeLiteral<I> typeLiteral, final TypeEncounter<I> typeEncounter) {
@@ -174,21 +141,10 @@ public class KillBillShiroWebModule extends ShiroWebModuleWith435 {
                 @Override
                 public void afterInjection(final Object o) {
                     final DefaultWebSecurityManager webSecurityManager = (DefaultWebSecurityManager) o;
-
-                    // Other realms have been injected by Guice (bindRealm().toInstance(...) makes Guice throw a ClassCastException?!)
-                    final Collection<Realm> realmsFromShiroIni = RealmsFromShiroIniProvider.get(configSource);
-
-                    if (webSecurityManager.getAuthorizer() instanceof ModularRealmAuthorizer) {
-                        final ModularRealmAuthorizer modularRealmAuthorizer = (ModularRealmAuthorizer) webSecurityManager.getAuthorizer();
-                        final Collection<Realm> realms = new LinkedList<Realm>(realmsFromShiroIni);
-                        realms.addAll(modularRealmAuthorizer.getRealms());
-                        modularRealmAuthorizer.setRealms(realms);
-                    }
-
                     if (webSecurityManager.getAuthenticator() instanceof ModularRealmAuthenticator) {
                         final ModularRealmAuthenticator authenticator = (ModularRealmAuthenticator) webSecurityManager.getAuthenticator();
                         authenticator.setAuthenticationStrategy(new FirstSuccessfulStrategyWith540());
-                        webSecurityManager.setAuthenticator(new ModularRealmAuthenticatorWith540(realmsFromShiroIni, authenticator));
+                        webSecurityManager.setAuthenticator(new ModularRealmAuthenticatorWith540(authenticator));
                     }
                 }
             });

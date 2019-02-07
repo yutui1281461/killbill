@@ -1,6 +1,6 @@
 /*
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2015 Groupon, Inc
+ * Copyright 2014-2015 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -45,7 +45,6 @@ import org.killbill.billing.catalog.api.Product;
 import org.killbill.billing.catalog.api.Tier;
 import org.killbill.billing.catalog.api.TieredBlock;
 import org.killbill.billing.catalog.api.TimeUnit;
-import org.killbill.billing.catalog.api.Unit;
 import org.killbill.billing.catalog.api.Usage;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -53,15 +52,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.swagger.annotations.ApiModel;
 
-@ApiModel(value="Catalog")
 public class CatalogJson {
 
     private final String name;
     private final Date effectiveDate;
     private final List<Currency> currencies;
-    private final List<UnitJson> units;
     private final List<ProductJson> products;
     private final List<PriceListJson> priceLists;
 
@@ -69,29 +65,21 @@ public class CatalogJson {
     public CatalogJson(@JsonProperty("name") final String name,
                        @JsonProperty("effectiveDate") final Date effectiveDate,
                        @JsonProperty("currencies") final List<Currency> currencies,
-                       @JsonProperty("units") final List<UnitJson> units,
                        @JsonProperty("products") final List<ProductJson> products,
                        @JsonProperty("priceLists") final List<PriceListJson> priceLists) {
         this.name = name;
         this.effectiveDate = effectiveDate;
         this.currencies = currencies;
-        this.units = units;
         this.products = products;
         this.priceLists = priceLists;
     }
+
 
     public CatalogJson(final Catalog catalog, final DateTime requestedDate) throws CatalogApiException {
         name = catalog.getCatalogName();
         effectiveDate = catalog.getStandaloneCatalogEffectiveDate(requestedDate);
         currencies = Arrays.asList(catalog.getSupportedCurrencies(requestedDate));
         priceLists = new ArrayList<PriceListJson>();
-
-        List<UnitJson> units = new ArrayList<UnitJson>();
-        for (final Unit unit : catalog.getUnits(requestedDate)) {
-            final UnitJson unitJson = new UnitJson(unit.getName(), unit.getPrettyName());
-            units.add(unitJson);
-        }
-        this.units = units;
 
         final Collection<Plan> plans = catalog.getPlans(requestedDate);
         final Map<String, ProductJson> productMap = new HashMap<String, ProductJson>();
@@ -104,11 +92,37 @@ public class CatalogJson {
             }
             ProductJson productJson = productMap.get(product.getName());
             if (productJson == null) {
-                productJson = new ProductJson(product);
+                productJson = new ProductJson(product.getCategory().toString(),
+                                              product.getName(),
+                                              toProductNames(product.getIncluded()),
+                                              toProductNames(product.getAvailable()));
                 productMap.put(product.getName(), productJson);
             }
 
-            final PlanJson planJson = new PlanJson(plan);
+            // Build the phases associated with this plan
+            final List<PhaseJson> phases = new LinkedList<PhaseJson>();
+            for (final PlanPhase phase : plan.getAllPhases()) {
+                final List<PriceJson> prices = new LinkedList<PriceJson>();
+                if (phase.getRecurring() != null && phase.getRecurring().getRecurringPrice() != null) {
+                    for (final Price price : phase.getRecurring().getRecurringPrice().getPrices()) {
+                        prices.add(new PriceJson(price));
+                    }
+                }
+
+                final List<PriceJson> fixedPrices = new LinkedList<PriceJson>();
+                if (phase.getFixed() != null && phase.getFixed().getPrice() != null) {
+                    for (final Price price : phase.getFixed().getPrice().getPrices()) {
+                        fixedPrices.add(new PriceJson(price));
+                    }
+                }
+
+                final DurationJson durationJson = new DurationJson(phase.getDuration().getUnit(), phase.getDuration().getNumber());
+                final List<UsageJson> usagesJson = buildUsagesJson(phase.getUsages());
+                final PhaseJson phaseJson = new PhaseJson(phase.getPhaseType().toString(), prices, fixedPrices, durationJson, usagesJson);
+                phases.add(phaseJson);
+            }
+
+            final PlanJson planJson = new PlanJson(plan.getName(), plan.getRecurringBillingPeriod(), phases);
             productJson.getPlans().add(planJson);
         }
 
@@ -121,16 +135,72 @@ public class CatalogJson {
 
     }
 
-    private static List<PriceJson> buildPrices(final InternationalPrice internationalPrice) throws CurrencyValueNull {
+    private List<UsageJson> buildUsagesJson(final Usage[] usages) throws CurrencyValueNull {
+        List<UsageJson> usagesJson = new ArrayList<UsageJson>();
+        for (int i = 0; i < usages.length; i++) {
+            usagesJson.add(new UsageJson(usages[i].getBillingPeriod().toString(), buildTiers(usages[i].getTiers())));
+        }
+        return usagesJson;
+    }
+
+    private List<TierJson> buildTiers(final Tier[] tiers) throws CurrencyValueNull {
+        List<TierJson> tiersJson = new ArrayList<TierJson>();
+        if (tiers != null && tiers.length > 0) {
+            for (int i=0; i < tiers.length; i++) {
+                tiersJson.add(new TierJson(buildTieredBlocks(tiers[i].getTieredBlocks()),
+                                           buildLimits(tiers[i].getLimits()),
+                                           buildPrices(tiers[i].getFixedPrice()),
+                                           buildPrices(tiers[i].getRecurringPrice())));
+            }
+        }
+        return tiersJson;
+    }
+
+    private List<LimitJson> buildLimits(final Limit[] limits) {
+        List<LimitJson> limitsJson = new ArrayList<LimitJson>();
+        if (limits != null && limits.length > 0) {
+            for (int i=0; i < limits.length; i++) {
+                limitsJson.add(new LimitJson(limits[i].getUnit().getName(),
+                                             limits[i].getMax().toString(),
+                                             limits[i].getMin().toString()));
+            }
+        }
+        return limitsJson;
+    }
+
+    private List<TieredBlockJson> buildTieredBlocks(final TieredBlock[] tieredBlocks) throws CurrencyValueNull {
+        List<TieredBlockJson> tieredBlocksJson = new ArrayList<TieredBlockJson>();
+        if (tieredBlocks != null && tieredBlocks.length > 0) {
+            for (int i=0; i < tieredBlocks.length; i++) {
+                tieredBlocksJson.add(new TieredBlockJson(tieredBlocks[i].getUnit().getName(),
+                                                         tieredBlocks[i].getSize().toString(),
+                                                         tieredBlocks[i].getMax().toString(),
+                                                         buildPrices(tieredBlocks[i].getPrice())));
+            }
+        }
+        return tieredBlocksJson;
+    }
+
+    private List<PriceJson> buildPrices(final InternationalPrice internationalPrice) throws CurrencyValueNull {
         List<PriceJson> pricesJson = new ArrayList<PriceJson>();
         Price[] prices = (internationalPrice != null) ? internationalPrice.getPrices() : null;
         if (prices != null && prices.length > 0) {
             for (int i=0; i < prices.length; i++) {
-                pricesJson.add(new PriceJson(prices[i].getCurrency(),
+                pricesJson.add(new PriceJson(prices[i].getCurrency().name(),
                                              prices[i].getValue()));
             }
         }
         return pricesJson;
+    }
+
+    private List<String> toProductNames(final Collection<Product> in) {
+        return Lists.transform(ImmutableList.<Product>copyOf(in),
+                               new Function<Product, String>() {
+                                   @Override
+                                   public String apply(final Product input) {
+                                       return input.getName();
+                                   }
+                               });
     }
 
     public List<ProductJson> getProducts() {
@@ -149,10 +219,6 @@ public class CatalogJson {
         return currencies;
     }
 
-    public List<UnitJson> getUnits() {
-        return units;
-    }
-
     public List<PriceListJson> getPriceLists() {
         return priceLists;
     }
@@ -163,7 +229,6 @@ public class CatalogJson {
         sb.append("name='").append(name).append('\'');
         sb.append(", effectiveDate='").append(effectiveDate).append('\'');
         sb.append(", currencies='").append(currencies).append('\'');
-        sb.append(", units='").append(units).append('\'');
         sb.append(", products=").append(products);
         sb.append(", priceLists=").append(priceLists);
         sb.append('}');
@@ -190,9 +255,6 @@ public class CatalogJson {
         if (currencies != null ? !currencies.equals(that.currencies) : that.currencies != null) {
             return false;
         }
-        if (units != null ? !units.equals(that.units) : that.units != null) {
-            return false;
-        }
         if (products != null ? !products.equals(that.products) : that.products != null) {
             return false;
         }
@@ -208,67 +270,14 @@ public class CatalogJson {
         int result = name != null ? name.hashCode() : 0;
         result = 31 * result + (effectiveDate != null ? effectiveDate.hashCode() : 0);
         result = 31 * result + (currencies != null ? currencies.hashCode() : 0);
-        result = 31 * result + (units != null ? units.hashCode() : 0);
         result = 31 * result + (products != null ? products.hashCode() : 0);
         return result;
     }
 
-    @ApiModel(value="Unit")
-    public static class UnitJson {
-
-        private final String name;
-        private final String prettyName;
-
-        @JsonCreator
-        public UnitJson(@JsonProperty("name") final String name,
-                        @JsonProperty("prettyName") final String prettyName) {
-            this.name = name;
-            this.prettyName = prettyName;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public String getPrettyName() {
-            return prettyName;
-        }
-
-        @Override
-        public String toString() {
-            final StringBuilder sb = new StringBuilder("UnitJson{");
-            sb.append("name='").append(name).append('\'');
-            sb.append(", prettyName='").append(prettyName).append('\'');
-            sb.append('}');
-            return sb.toString();
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            UnitJson unitJson = (UnitJson) o;
-
-            if (name != null ? !name.equals(unitJson.name) : unitJson.name != null) return false;
-            return prettyName != null ? prettyName.equals(unitJson.prettyName) : unitJson.prettyName == null;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = name != null ? name.hashCode() : 0;
-            result = 31 * result + (prettyName != null ? prettyName.hashCode() : 0);
-            return result;
-        }
-
-    }
-
-    @ApiModel(value="Product")
     public static class ProductJson {
 
         private final String type;
         private final String name;
-        private final String prettyName;
         private final List<PlanJson> plans;
         private final List<String> included;
         private final List<String> available;
@@ -276,25 +285,18 @@ public class CatalogJson {
         @JsonCreator
         public ProductJson(@JsonProperty("type") final String type,
                            @JsonProperty("name") final String name,
-                           @JsonProperty("prettyName") final String prettyName,
                            @JsonProperty("plans") final List<PlanJson> plans,
                            @JsonProperty("included") final List<String> included,
                            @JsonProperty("available") final List<String> available) {
             this.type = type;
             this.name = name;
-            this.prettyName = prettyName;
             this.plans = plans;
             this.included = included;
             this.available = available;
         }
 
-        public ProductJson(final Product product) {
-            this.type = product.getCategory().toString();
-            this.name = product.getName();
-            this.prettyName = product.getPrettyName();
-            this.plans = new LinkedList<PlanJson>();
-            this.included = toProductNames(product.getIncluded());
-            this.available = toProductNames(product.getAvailable());
+        public ProductJson(final String type, final String name, final List<String> included, final List<String> available) {
+            this(type, name, new LinkedList<PlanJson>(), included, available);
         }
 
         public String getType() {
@@ -303,10 +305,6 @@ public class CatalogJson {
 
         public String getName() {
             return name;
-        }
-
-        public String getPrettyName() {
-            return prettyName;
         }
 
         public List<PlanJson> getPlans() {
@@ -326,7 +324,6 @@ public class CatalogJson {
             final StringBuilder sb = new StringBuilder("ProductJson{");
             sb.append("type='").append(type).append('\'');
             sb.append(", name='").append(name).append('\'');
-            sb.append(", prettyName='").append(prettyName).append('\'');
             sb.append(", plans=").append(plans);
             sb.append(", included=").append(included);
             sb.append(", available=").append(available);
@@ -373,56 +370,25 @@ public class CatalogJson {
             result = 31 * result + (available != null ? available.hashCode() : 0);
             return result;
         }
-
-        private List<String> toProductNames(final Collection<Product> in) {
-            return Lists.transform(ImmutableList.<Product>copyOf(in),
-                                   new Function<Product, String>() {
-                                       @Override
-                                       public String apply(final Product input) {
-                                           return input.getName();
-                                       }
-                                   });
-        }
     }
 
-    @ApiModel(value="Plan")
     public static class PlanJson {
 
         private final String name;
-        private final String prettyName;
         private final BillingPeriod billingPeriod;
         private final List<PhaseJson> phases;
 
-        public PlanJson(final Plan plan) throws CurrencyValueNull {
-            final List<PhaseJson> phases = new LinkedList<PhaseJson>();
-            for (final PlanPhase phase : plan.getAllPhases()) {
-                final PhaseJson phaseJson = new PhaseJson(phase);
-                phases.add(phaseJson);
-            }
-
-            this.name = plan.getName();
-            this.prettyName = plan.getPrettyName();
-            this.billingPeriod = plan.getRecurringBillingPeriod();
-            this.phases = phases;
-        }
-
         @JsonCreator
         public PlanJson(@JsonProperty("name") final String name,
-                        @JsonProperty("prettyName") final String prettyName,
                         @JsonProperty("billingPeriod") final BillingPeriod billingPeriod,
                         @JsonProperty("phases") final List<PhaseJson> phases) {
             this.name = name;
-            this.prettyName = prettyName;
             this.billingPeriod = billingPeriod;
             this.phases = phases;
         }
 
         public String getName() {
             return name;
-        }
-
-        public String getPrettyName() {
-            return prettyName;
         }
 
         public BillingPeriod getBillingPeriod() {
@@ -437,7 +403,6 @@ public class CatalogJson {
         public String toString() {
             final StringBuilder sb = new StringBuilder("PlanJson{");
             sb.append("name='").append(name).append('\'');
-            sb.append("prettyName='").append(prettyName).append('\'');
             sb.append("billingPeriod='").append(billingPeriod).append('\'');
             sb.append(", phases=").append(phases);
             sb.append('}');
@@ -477,7 +442,6 @@ public class CatalogJson {
         }
     }
 
-    @ApiModel(value="TieredBlock")
     public static class TieredBlockJson {
         private final String unit;
         private final String size;
@@ -556,7 +520,6 @@ public class CatalogJson {
         }
     }
 
-    @ApiModel(value="Limit")
     public static class LimitJson {
         private final String unit;
         private final String max;
@@ -624,7 +587,6 @@ public class CatalogJson {
         }
     }
 
-    @ApiModel(value="Tier")
     public static class TierJson {
         private final List<TieredBlockJson> blocks;
         private final List<LimitJson> limits;
@@ -703,7 +665,6 @@ public class CatalogJson {
         }
     }
 
-    @ApiModel(value="Usage")
     public static class UsageJson {
         private final String billingPeriod;
         private final List<TierJson> tiers;
@@ -760,7 +721,6 @@ public class CatalogJson {
         }
     }
 
-    @ApiModel(value="Phase")
     public static class PhaseJson {
 
         private final String type;
@@ -768,31 +728,6 @@ public class CatalogJson {
         private final List<PriceJson> fixedPrices;
         private final DurationJson duration;
         private final List<UsageJson> usages;
-
-        public PhaseJson(final PlanPhase phase) throws CurrencyValueNull {
-            final List<PriceJson> prices = new LinkedList<PriceJson>();
-            if (phase.getRecurring() != null && phase.getRecurring().getRecurringPrice() != null) {
-                for (final Price price : phase.getRecurring().getRecurringPrice().getPrices()) {
-                    prices.add(new PriceJson(price));
-                }
-            }
-
-            final List<PriceJson> fixedPrices = new LinkedList<PriceJson>();
-            if (phase.getFixed() != null && phase.getFixed().getPrice() != null) {
-                for (final Price price : phase.getFixed().getPrice().getPrices()) {
-                    fixedPrices.add(new PriceJson(price));
-                }
-            }
-
-            final DurationJson durationJson = new DurationJson(phase.getDuration().getUnit(), phase.getDuration().getNumber());
-            final List<UsageJson> usagesJson = buildUsagesJson(phase.getUsages());
-
-            this.type = phase.getPhaseType().toString();
-            this.prices = prices;
-            this.fixedPrices = fixedPrices;
-            this.duration = durationJson;
-            this.usages = usagesJson;
-        }
 
         @JsonCreator
         public PhaseJson(@JsonProperty("type") final String type,
@@ -810,19 +745,15 @@ public class CatalogJson {
         public String getType() {
             return type;
         }
-
         public List<PriceJson> getPrices() {
             return prices;
         }
-
         public List<PriceJson> getFixedPrices() {
             return fixedPrices;
         }
-
         public DurationJson getDuration() {
             return duration;
         }
-
         public List<UsageJson> getUsages() {
             return usages;
         }
@@ -862,7 +793,7 @@ public class CatalogJson {
             if (duration != null ? !duration.equals(phaseJson.duration) : phaseJson.duration != null) {
                 return false;
             }
-            if (usages != null ? !usages.equals(phaseJson.usages) : phaseJson.usages != null) {
+            if (usages != null ? !usages.equals(phaseJson.usages) : phaseJson.usages!= null) {
                 return false;
             }
 
@@ -878,73 +809,25 @@ public class CatalogJson {
             result = 31 * result + (usages != null ? usages.hashCode() : 0);
             return result;
         }
-
-        private List<UsageJson> buildUsagesJson(final Usage[] usages) throws CurrencyValueNull {
-            List<UsageJson> usagesJson = new ArrayList<UsageJson>();
-            for (int i = 0; i < usages.length; i++) {
-                usagesJson.add(new UsageJson(usages[i].getBillingPeriod().toString(), buildTiers(usages[i].getTiers())));
-            }
-            return usagesJson;
-        }
-
-        private List<TierJson> buildTiers(final Tier[] tiers) throws CurrencyValueNull {
-            List<TierJson> tiersJson = new ArrayList<TierJson>();
-            if (tiers != null && tiers.length > 0) {
-                for (int i = 0; i < tiers.length; i++) {
-                    tiersJson.add(new TierJson(buildTieredBlocks(tiers[i].getTieredBlocks()),
-                                               buildLimits(tiers[i].getLimits()),
-                                               buildPrices(tiers[i].getFixedPrice()),
-                                               buildPrices(tiers[i].getRecurringPrice())));
-                }
-            }
-            return tiersJson;
-        }
-
-        private List<LimitJson> buildLimits(final Limit[] limits) {
-            List<LimitJson> limitsJson = new ArrayList<LimitJson>();
-            if (limits != null && limits.length > 0) {
-                for (int i = 0; i < limits.length; i++) {
-                    limitsJson.add(new LimitJson(limits[i].getUnit().getName(),
-                                                 limits[i].getMax().toString(),
-                                                 limits[i].getMin().toString()));
-                }
-            }
-            return limitsJson;
-        }
-
-        private List<TieredBlockJson> buildTieredBlocks(final TieredBlock[] tieredBlocks) throws CurrencyValueNull {
-            List<TieredBlockJson> tieredBlocksJson = new ArrayList<TieredBlockJson>();
-            if (tieredBlocks != null && tieredBlocks.length > 0) {
-                for (int i = 0; i < tieredBlocks.length; i++) {
-                    tieredBlocksJson.add(new TieredBlockJson(tieredBlocks[i].getUnit().getName(),
-                                                             tieredBlocks[i].getSize().toString(),
-                                                             tieredBlocks[i].getMax().toString(),
-                                                             buildPrices(tieredBlocks[i].getPrice())));
-                }
-            }
-            return tieredBlocksJson;
-        }
     }
 
-
-    @ApiModel(value="Price")
     public static class PriceJson {
 
-        private final Currency currency;
+        private final String currency;
         private final BigDecimal value;
 
         @JsonCreator
-        public PriceJson(@JsonProperty("currency") final Currency currency,
+        public PriceJson(@JsonProperty("currency") final String currency,
                          @JsonProperty("value") final BigDecimal value) {
             this.currency = currency;
             this.value = value;
         }
 
         public PriceJson(final Price price) throws CurrencyValueNull {
-            this(price.getCurrency(), price.getValue());
+            this(price.getCurrency().toString(), price.getValue());
         }
 
-        public Currency getCurrency() {
+        public String getCurrency() {
             return currency;
         }
 
@@ -990,7 +873,6 @@ public class CatalogJson {
         }
     }
 
-    @ApiModel(value="PriceList")
     public static class PriceListJson {
 
         private String name;
@@ -1056,7 +938,6 @@ public class CatalogJson {
 
     }
 
-    @ApiModel(value="Duration")
     public static class DurationJson {
 
         private final TimeUnit unit;

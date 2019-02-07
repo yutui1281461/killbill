@@ -102,20 +102,12 @@ public abstract class OverdueTestSuiteWithEmbeddedDB extends GuicyKillbillTestSu
 
     @BeforeClass(groups = "slow")
     protected void beforeClass() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
-        final Injector injector = Guice.createInjector(new TestOverdueModuleWithEmbeddedDB(configSource, clock));
+        final Injector injector = Guice.createInjector(new TestOverdueModuleWithEmbeddedDB(configSource));
         injector.injectMembers(this);
     }
 
     @BeforeMethod(groups = "slow")
     public void beforeMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         super.beforeMethod();
         cacheControllerDispatcher.clearAll();
         bus.start();
@@ -127,10 +119,6 @@ public abstract class OverdueTestSuiteWithEmbeddedDB extends GuicyKillbillTestSu
 
     @AfterMethod(groups = "slow")
     public void afterMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         service.stop();
         bus.unregister(listener);
         bus.stop();

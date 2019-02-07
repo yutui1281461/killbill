@@ -39,9 +39,7 @@ import org.killbill.billing.util.audit.AuditLog;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.swagger.annotations.ApiModel;
 
-@ApiModel(value="AccountTimeline")
 public class AccountTimelineJson {
 
     private final AccountJson account;

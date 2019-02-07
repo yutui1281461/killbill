@@ -20,10 +20,7 @@ package org.killbill.billing.account.api.user;
 
 import java.util.UUID;
 
-import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
 import org.killbill.billing.account.api.AccountData;
 import org.killbill.billing.account.dao.AccountModelDao;
 import org.killbill.billing.catalog.api.Currency;
@@ -36,8 +33,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Strings;
 
 public class DefaultAccountCreationEvent extends BusEventBase implements AccountCreationInternalEvent {
-
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = ISODateTimeFormat.dateTimeParser();
 
     private final UUID id;
     private final AccountData data;
@@ -118,7 +113,6 @@ public class DefaultAccountCreationEvent extends BusEventBase implements Account
         private final UUID parentAccountId;
         private final Boolean isPaymentDelegatedToParent;
         private final UUID paymentMethodId;
-        private final String referenceTime;
         private final String timeZone;
         private final String locale;
         private final String address1;
@@ -131,6 +125,7 @@ public class DefaultAccountCreationEvent extends BusEventBase implements Account
         private final String phone;
         private final String notes;
         private final Boolean isMigrated;
+        private final Boolean isNotifiedForInvoices;
 
         public DefaultAccountData(final AccountModelDao d) {
             this(d.getExternalKey(),
@@ -142,7 +137,6 @@ public class DefaultAccountCreationEvent extends BusEventBase implements Account
                  d.getParentAccountId(),
                  d.getIsPaymentDelegatedToParent(),
                  d.getPaymentMethodId(),
-                 d.getReferenceTime() != null ? d.getReferenceTime().toString() : null,
                  d.getTimeZone() != null ? d.getTimeZone().getID() : null,
                  d.getLocale(),
                  d.getAddress1(),
@@ -154,7 +148,8 @@ public class DefaultAccountCreationEvent extends BusEventBase implements Account
                  d.getCountry(),
                  d.getPhone(),
                  d.getNotes(),
-                 d.getMigrated());
+                 d.getMigrated(),
+                 d.getIsNotifiedForInvoices());
         }
 
         @JsonCreator
@@ -167,7 +162,6 @@ public class DefaultAccountCreationEvent extends BusEventBase implements Account
                                   @JsonProperty("parentAccountId") final UUID parentAccountId,
                                   @JsonProperty("isPaymentDelegatedToParent") final Boolean isPaymentDelegatedToParent,
                                   @JsonProperty("paymentMethodId") final UUID paymentMethodId,
-                                  @JsonProperty("referenceTime") final String referenceTime,
                                   @JsonProperty("timeZone") final String timeZone,
                                   @JsonProperty("locale") final String locale,
                                   @JsonProperty("address1") final String address1,
@@ -179,7 +173,8 @@ public class DefaultAccountCreationEvent extends BusEventBase implements Account
                                   @JsonProperty("country") final String country,
                                   @JsonProperty("phone") final String phone,
                                   @JsonProperty("notes") final String notes,
-                                  @JsonProperty("isMigrated") final Boolean isMigrated) {
+                                  @JsonProperty("isMigrated") final Boolean isMigrated,
+                                  @JsonProperty("isNotifiedForInvoices") final Boolean isNotifiedForInvoices) {
             this.externalKey = externalKey;
             this.name = name;
             this.firstNameLength = firstNameLength;
@@ -189,7 +184,6 @@ public class DefaultAccountCreationEvent extends BusEventBase implements Account
             this.parentAccountId = parentAccountId;
             this.isPaymentDelegatedToParent = isPaymentDelegatedToParent;
             this.paymentMethodId = paymentMethodId;
-            this.referenceTime = referenceTime;
             this.timeZone = timeZone;
             this.locale = locale;
             this.address1 = address1;
@@ -202,6 +196,7 @@ public class DefaultAccountCreationEvent extends BusEventBase implements Account
             this.phone = phone;
             this.notes = notes;
             this.isMigrated = isMigrated;
+            this.isNotifiedForInvoices = isNotifiedForInvoices;
         }
 
         @Override
@@ -320,20 +315,25 @@ public class DefaultAccountCreationEvent extends BusEventBase implements Account
         }
 
         @Override
-        public DateTime getReferenceTime() {
-            return referenceTime != null ?  DATE_TIME_FORMATTER.parseDateTime(referenceTime) : null;
+        @JsonIgnore
+        public Boolean isMigrated() {
+            return isMigrated;
         }
 
         @Override
         @JsonIgnore
-        public Boolean isMigrated() {
-            return isMigrated;
+        public Boolean isNotifiedForInvoices() {
+            return isNotifiedForInvoices;
         }
 
         // These getters are for Jackson serialization only
 
         public Boolean getIsMigrated() {
             return isMigrated;
+        }
+
+        public Boolean getIsNotifiedForInvoices() {
+            return isNotifiedForInvoices;
         }
 
         public Boolean getIsPaymentDelegatedToParent() {
@@ -355,6 +355,9 @@ public class DefaultAccountCreationEvent extends BusEventBase implements Account
                 return false;
             }
             if (isMigrated != null ? !isMigrated.equals(that.isMigrated) : that.isMigrated != null) {
+                return false;
+            }
+            if (isNotifiedForInvoices != null ? !isNotifiedForInvoices.equals(that.isNotifiedForInvoices) : that.isNotifiedForInvoices != null) {
                 return false;
             }
             if (address1 != null ? !address1.equals(that.address1) : that.address1 != null) {
@@ -411,12 +414,10 @@ public class DefaultAccountCreationEvent extends BusEventBase implements Account
             if (stateOrProvince != null ? !stateOrProvince.equals(that.stateOrProvince) : that.stateOrProvince != null) {
                 return false;
             }
-            if (referenceTime != null ? referenceTime.compareTo(that.referenceTime) != 0 : that.referenceTime != null) {
-                return false;
-            }
             if (timeZone != null ? !timeZone.equals(that.timeZone) : that.timeZone != null) {
                 return false;
             }
+
             return true;
         }
 
@@ -431,7 +432,6 @@ public class DefaultAccountCreationEvent extends BusEventBase implements Account
             result = 31 * result + (parentAccountId != null ? parentAccountId.hashCode() : 0);
             result = 31 * result + (isPaymentDelegatedToParent != null ? isPaymentDelegatedToParent.hashCode() : 0);
             result = 31 * result + (paymentMethodId != null ? paymentMethodId.hashCode() : 0);
-            result = 31 * result + (referenceTime != null ? referenceTime.hashCode() : 0);
             result = 31 * result + (timeZone != null ? timeZone.hashCode() : 0);
             result = 31 * result + (locale != null ? locale.hashCode() : 0);
             result = 31 * result + (address1 != null ? address1.hashCode() : 0);
@@ -444,6 +444,7 @@ public class DefaultAccountCreationEvent extends BusEventBase implements Account
             result = 31 * result + (phone != null ? phone.hashCode() : 0);
             result = 31 * result + (notes != null ? notes.hashCode() : 0);
             result = 31 * result + (isMigrated != null ? isMigrated.hashCode() : 0);
+            result = 31 * result + (isNotifiedForInvoices != null ? isNotifiedForInvoices.hashCode() : 0);
             return result;
         }
     }

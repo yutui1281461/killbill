@@ -19,7 +19,7 @@ tableValues() ::= <<
 , :recordDate
 , :amount
 , :trackingId
-, :createdBy
+, :userName
 , :createdDate
 >>
 

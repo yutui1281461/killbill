@@ -21,7 +21,7 @@
     <parent>
         <artifactId>killbill</artifactId>
         <groupId>org.kill-bill.billing</groupId>
-        <version>0.20.7-SNAPSHOT</version>
+        <version>0.18.14-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>killbill-util</artifactId>
@@ -115,11 +115,6 @@
             <artifactId>metrics-jcache</artifactId>
         </dependency>
         <dependency>
-            <groupId>it.ozimov</groupId>
-            <artifactId>embedded-redis</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>javax.cache</groupId>
             <artifactId>cache-api</artifactId>
         </dependency>
@@ -145,6 +140,10 @@
         <dependency>
             <groupId>org.antlr</groupId>
             <artifactId>ST4</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-email</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.shiro</groupId>
@@ -206,15 +205,12 @@
         <dependency>
             <groupId>org.kill-bill.billing</groupId>
             <artifactId>killbill-platform-osgi-api</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.kill-bill.billing</groupId>
             <artifactId>killbill-platform-test</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.kill-bill.billing.plugin</groupId>
-            <artifactId>killbill-plugin-api-invoice</artifactId>
         </dependency>
         <dependency>
             <groupId>org.kill-bill.billing.plugin</groupId>
@@ -287,10 +283,6 @@
             <groupId>org.mockito</groupId>
             <artifactId>mockito-all</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.redisson</groupId>
-            <artifactId>redisson</artifactId>
         </dependency>
         <dependency>
             <groupId>org.skife.config</groupId>

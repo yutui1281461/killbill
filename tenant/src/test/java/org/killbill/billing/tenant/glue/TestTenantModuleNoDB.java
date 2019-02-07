@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014 Groupon, Inc
+ * Copyright 2014 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -19,33 +19,22 @@
 package org.killbill.billing.tenant.glue;
 
 import org.killbill.billing.GuicyKillbillTestNoDBModule;
-import org.killbill.billing.mock.glue.MockAccountModule;
 import org.killbill.billing.mock.glue.MockNonEntityDaoModule;
 import org.killbill.billing.platform.api.KillbillConfigSource;
-import org.killbill.billing.util.glue.KillBillShiroAopModule;
-import org.killbill.billing.util.glue.SecurityModule;
-import org.killbill.billing.util.glue.TestUtilModuleNoDB.ShiroModuleNoDB;
-import org.killbill.clock.ClockMock;
+import org.killbill.billing.tenant.dao.DefaultTenantDao;
+import org.killbill.billing.tenant.dao.TenantDao;
 
 public class TestTenantModuleNoDB extends TestTenantModule {
 
-    private final ClockMock clock;
-
-    public TestTenantModuleNoDB(final KillbillConfigSource configSource, final ClockMock clock) {
+    public TestTenantModuleNoDB(final KillbillConfigSource configSource) {
         super(configSource);
-        this.clock = clock;
     }
 
     @Override
     public void configure() {
         super.configure();
 
-        install(new GuicyKillbillTestNoDBModule(configSource, clock));
+        install(new GuicyKillbillTestNoDBModule(configSource));
         install(new MockNonEntityDaoModule(configSource));
-        install(new MockAccountModule(configSource));
-
-        install(new ShiroModuleNoDB(configSource));
-        install(new KillBillShiroAopModule());
-        install(new SecurityModule(configSource));
     }
 }

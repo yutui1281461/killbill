@@ -1,8 +1,7 @@
 /*
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014 Groupon, Inc
  *
- * The Billing Project licenses this file to you under the Apache License, version 2.0
+ * Groupon licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
  * License.  You may obtain a copy of the License at:
  *
@@ -28,7 +27,7 @@ import org.killbill.billing.catalog.api.Currency;
 import org.killbill.billing.invoice.api.InvoiceItemType;
 import org.killbill.billing.util.UUIDs;
 
-public class TaxInvoiceItem extends InvoiceItemCatalogBase {
+public class TaxInvoiceItem extends InvoiceItemBase {
 
     public TaxInvoiceItem(final UUID invoiceId, final UUID accountId, @Nullable final UUID bundleId, @Nullable final String description,
                           final LocalDate date, final BigDecimal amount, final Currency currency) {
@@ -37,14 +36,13 @@ public class TaxInvoiceItem extends InvoiceItemCatalogBase {
 
     public TaxInvoiceItem(final UUID id, final UUID invoiceId, final UUID accountId, @Nullable final UUID bundleId,
                           @Nullable final String description, final LocalDate date, final BigDecimal amount, final Currency currency) {
-        this(id, null, invoiceId, accountId, bundleId, null, null, null, null, null, null, null, null, null, date, null, description, amount, currency, null, null);
+        this(id, null, invoiceId, accountId, bundleId, null, null, null, null, date, description, amount, currency, null);
     }
 
     public TaxInvoiceItem(final UUID id, @Nullable final DateTime createdDate, final UUID invoiceId, final UUID accountId, @Nullable final UUID bundleId,
-                          @Nullable final UUID subscriptionId, @Nullable final String productName, @Nullable final String planName, @Nullable final String phaseName, @Nullable final String usageName,
-                          @Nullable final String prettyProductName, @Nullable final String prettyPlanName, @Nullable final String prettyPhaseName, @Nullable final String prettyUsageName,
-                          final LocalDate startDate, @Nullable final LocalDate endDate, @Nullable final String description, final BigDecimal amount, final Currency currency, @Nullable final UUID linkedItemId, @Nullable final String itemDetails) {
-        super(id, createdDate, invoiceId, accountId, bundleId, subscriptionId, description, productName, planName, phaseName, usageName, prettyProductName, prettyPlanName, prettyPhaseName, prettyUsageName, startDate, endDate, amount, null, currency, linkedItemId, null, itemDetails, InvoiceItemType.TAX);
+                          @Nullable final UUID subscriptionId, @Nullable final String planName, @Nullable final String phaseName, @Nullable final String usageName,
+                          final LocalDate date, @Nullable final String description, final BigDecimal amount, final Currency currency, @Nullable final UUID linkedItemId) {
+        super(id, createdDate, invoiceId, accountId, bundleId, subscriptionId, description, planName, phaseName, usageName, date, null, amount, currency, linkedItemId);
     }
 
     @Override
@@ -54,5 +52,10 @@ public class TaxInvoiceItem extends InvoiceItemCatalogBase {
         }
 
         return "Tax";
+    }
+
+    @Override
+    public InvoiceItemType getInvoiceItemType() {
+        return InvoiceItemType.TAX;
     }
 }

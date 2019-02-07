@@ -95,8 +95,8 @@ public abstract class DefaultCase<T> extends ValidatingConfig<StandaloneCatalog>
     }
 
     @Override
-    public void initialize(final StandaloneCatalog catalog) {
-        super.initialize(catalog);
+    public void initialize(final StandaloneCatalog catalog, final URI sourceURI) {
+        super.initialize(catalog, sourceURI);
         CatalogSafetyInitializer.initializeNonRequiredNullFieldsWithDefaultValue(this);
     }
 

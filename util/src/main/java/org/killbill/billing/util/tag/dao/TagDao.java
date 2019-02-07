@@ -22,9 +22,7 @@ import java.util.UUID;
 import org.killbill.billing.ObjectType;
 import org.killbill.billing.callcontext.InternalCallContext;
 import org.killbill.billing.callcontext.InternalTenantContext;
-import org.killbill.billing.util.api.AuditLevel;
 import org.killbill.billing.util.api.TagApiException;
-import org.killbill.billing.util.audit.AuditLogWithHistory;
 import org.killbill.billing.util.entity.Pagination;
 import org.killbill.billing.util.entity.dao.EntityDao;
 import org.killbill.billing.util.tag.Tag;
@@ -40,7 +38,4 @@ public interface TagDao extends EntityDao<TagModelDao, Tag, TagApiException> {
     List<TagModelDao> getTagsForAccountType(ObjectType objectType, boolean includedDeleted, InternalTenantContext internalTenantContext);
 
     List<TagModelDao> getTagsForAccount(boolean includedDeleted, InternalTenantContext internalTenantContext);
-
-    List<AuditLogWithHistory> getTagAuditLogsWithHistoryForId(UUID tagId, AuditLevel auditLevel, InternalTenantContext context);
-
 }

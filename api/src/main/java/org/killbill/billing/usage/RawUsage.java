@@ -30,6 +30,4 @@ public interface RawUsage {
     String getUnitType();
 
     Long getAmount();
-
-    String getTrackingId();
 }

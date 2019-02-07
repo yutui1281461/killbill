@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014 Groupon, Inc
+ * Copyright 2014 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -24,19 +24,14 @@ import org.killbill.billing.currency.api.CurrencyConversionApi;
 import org.killbill.billing.invoice.InvoiceListener;
 import org.killbill.billing.invoice.TestInvoiceNotificationQListener;
 import org.killbill.billing.platform.api.KillbillConfigSource;
-import org.killbill.billing.util.glue.AuditModule;
 import org.killbill.billing.util.glue.NonEntityDaoModule;
 import org.killbill.billing.util.glue.TagStoreModule;
-import org.killbill.clock.ClockMock;
 import org.mockito.Mockito;
 
 public class TestInvoiceModuleWithEmbeddedDb extends TestInvoiceModule {
 
-    private final ClockMock clock;
-
-    public TestInvoiceModuleWithEmbeddedDb(final KillbillConfigSource configSource, final ClockMock clock) {
+    public TestInvoiceModuleWithEmbeddedDb(final KillbillConfigSource configSource) {
         super(configSource);
-        this.clock = clock;
     }
 
     @Override
@@ -49,10 +44,9 @@ public class TestInvoiceModuleWithEmbeddedDb extends TestInvoiceModule {
     public void configure() {
         super.configure();
         install(new DefaultAccountModule(configSource));
-        install(new GuicyKillbillTestWithEmbeddedDBModule(configSource, clock));
+        install(new GuicyKillbillTestWithEmbeddedDBModule(configSource));
         install(new NonEntityDaoModule(configSource));
         install(new TagStoreModule(configSource));
-        install(new AuditModule(configSource));
 
         bind(CurrencyConversionApi.class).toInstance(Mockito.mock(CurrencyConversionApi.class));
     }

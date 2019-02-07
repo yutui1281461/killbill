@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014 Groupon, Inc
+ * Copyright 2014 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -21,22 +21,18 @@ package org.killbill.billing.overdue.glue;
 import org.killbill.billing.GuicyKillbillTestNoDBModule;
 import org.killbill.billing.mock.glue.MockNonEntityDaoModule;
 import org.killbill.billing.platform.api.KillbillConfigSource;
-import org.killbill.clock.ClockMock;
 
 public class TestOverdueModuleNoDB extends TestOverdueModule {
 
-    private final ClockMock clock;
-
-    public TestOverdueModuleNoDB(final KillbillConfigSource configSource, final ClockMock clock) {
+    public TestOverdueModuleNoDB(final KillbillConfigSource configSource) {
         super(configSource);
-        this.clock = clock;
     }
 
     @Override
     public void configure() {
         super.configure();
 
-        install(new GuicyKillbillTestNoDBModule(configSource, clock));
+        install(new GuicyKillbillTestNoDBModule(configSource));
         install(new MockNonEntityDaoModule(configSource));
     }
 }

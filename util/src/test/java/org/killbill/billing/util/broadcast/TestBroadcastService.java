@@ -1,6 +1,6 @@
 /*
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2015 Groupon, Inc
+ * Copyright 2014-2015 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -17,9 +17,6 @@
 
 package org.killbill.billing.util.broadcast;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.killbill.billing.api.TestApiListener.NextEvent;
 import org.killbill.billing.platform.api.KillbillConfigSource;
 import org.killbill.billing.util.UtilTestSuiteWithEmbeddedDB;
@@ -28,6 +25,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 
 public class TestBroadcastService extends UtilTestSuiteWithEmbeddedDB {
@@ -36,18 +34,13 @@ public class TestBroadcastService extends UtilTestSuiteWithEmbeddedDB {
     private BroadcastService broadcastService;
 
     @Override
-    protected KillbillConfigSource getConfigSource(final Map<String, String> extraProperties) {
-        final Map<String, String> allExtraProperties = new HashMap<String, String>(extraProperties);
-        allExtraProperties.put("org.killbill.billing.util.broadcast.rate", "500ms");
-        return getConfigSource(null, allExtraProperties);
+    protected KillbillConfigSource getConfigSource() {
+            return getConfigSource(null,
+                               ImmutableMap.<String, String>of("org.killbill.billing.util.broadcast.rate", "500ms"));
     }
 
     @BeforeMethod(groups = "slow")
     public void beforeMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         super.beforeMethod();
         ((DefaultBroadcastService) broadcastService).initialize();
         ((DefaultBroadcastService) broadcastService).start();
@@ -55,10 +48,6 @@ public class TestBroadcastService extends UtilTestSuiteWithEmbeddedDB {
 
     @AfterMethod(groups = "slow")
     public void afterMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         ((DefaultBroadcastService) broadcastService).stop();
         super.afterMethod();
     }

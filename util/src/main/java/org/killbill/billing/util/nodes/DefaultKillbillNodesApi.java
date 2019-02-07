@@ -26,7 +26,6 @@ import org.killbill.CreatorName;
 import org.killbill.billing.broadcast.BroadcastApi;
 import org.killbill.billing.osgi.api.PluginInfo;
 import org.killbill.billing.osgi.api.PluginsInfoApi;
-import org.killbill.billing.platform.api.KillbillService.KILLBILL_SERVICES;
 import org.killbill.billing.util.nodes.dao.NodeInfoDao;
 import org.killbill.billing.util.nodes.dao.NodeInfoModelDao;
 import org.killbill.billing.util.nodes.json.NodeInfoModelJson;
@@ -95,7 +94,7 @@ public class DefaultKillbillNodesApi implements KillbillNodesApi {
         final String event;
         try {
             event = mapper.serializeNodeCommand(nodeCommand.getNodeCommandMetadata());
-            broadcastApi.broadcast(KILLBILL_SERVICES.BROADCAST_SERVICE.getServiceName(), nodeCommand.getNodeCommandType(), event, clock.getUTCNow(), "unset", localNodeOnly);
+            broadcastApi.broadcast(DefaultKillbillNodesService.NODES_SERVICE_NAME, nodeCommand.getNodeCommandType(), event, clock.getUTCNow(), "unset", localNodeOnly);
 
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);

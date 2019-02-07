@@ -27,7 +27,6 @@ import org.killbill.billing.catalog.api.CatalogApiException;
 import org.killbill.billing.catalog.api.Currency;
 import org.killbill.billing.catalog.api.Plan;
 import org.killbill.billing.catalog.api.PlanPhase;
-import org.killbill.billing.catalog.api.TierBlockPolicy;
 import org.killbill.billing.catalog.api.Usage;
 import org.killbill.billing.catalog.api.UsageType;
 import org.killbill.xmlloader.XMLLoader;
@@ -72,7 +71,6 @@ public class TestXMLReader extends CatalogTestSuiteNoDB {
             assertEquals(usage.getBillingPeriod(), BillingPeriod.MONTHLY);
             assertEquals(usage.getUsageType(), UsageType.CAPACITY);
             assertEquals(usage.getBillingMode(), BillingMode.IN_ADVANCE);
-            assertEquals(usage.getTierBlockPolicy(), TierBlockPolicy.ALL_TIERS);
 
             assertEquals(usage.getBlocks().length, 0);
             assertEquals(usage.getTiers().length, 0);

@@ -26,7 +26,6 @@ import javax.annotation.Nullable;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.killbill.billing.catalog.api.CatalogApiException;
 import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -98,7 +97,7 @@ public class TestDefaultBillingEvent extends JunctionTestSuiteNoDB {
     }
 
     @Test(groups = "fast")
-    public void testEventOrderingSubscription() throws CatalogApiException {
+    public void testEventOrderingSubscription() {
         final BillingEvent event0 = createEvent(subscription(ID_ZERO), new DateTime("2012-01-31T00:02:04.000Z"), SubscriptionBaseTransitionType.CREATE);
         final BillingEvent event1 = createEvent(subscription(ID_ONE), new DateTime("2012-01-31T00:02:04.000Z"), SubscriptionBaseTransitionType.CREATE);
         final BillingEvent event2 = createEvent(subscription(ID_TWO), new DateTime("2012-01-31T00:02:04.000Z"), SubscriptionBaseTransitionType.CREATE);
@@ -116,7 +115,7 @@ public class TestDefaultBillingEvent extends JunctionTestSuiteNoDB {
     }
 
     @Test(groups = "fast")
-    public void testEventOrderingDate() throws CatalogApiException {
+    public void testEventOrderingDate() {
         final BillingEvent event0 = createEvent(subscription(ID_ZERO), new DateTime("2012-01-01T00:02:04.000Z"), SubscriptionBaseTransitionType.CREATE);
         final BillingEvent event1 = createEvent(subscription(ID_ZERO), new DateTime("2012-02-01T00:02:04.000Z"), SubscriptionBaseTransitionType.CREATE);
         final BillingEvent event2 = createEvent(subscription(ID_ZERO), new DateTime("2012-03-01T00:02:04.000Z"), SubscriptionBaseTransitionType.CREATE);
@@ -134,7 +133,7 @@ public class TestDefaultBillingEvent extends JunctionTestSuiteNoDB {
     }
 
     @Test(groups = "fast")
-    public void testEventTotalOrdering() throws CatalogApiException {
+    public void testEventTotalOrdering() {
         final BillingEvent event0 = createEvent(subscription(ID_ZERO), new DateTime("2012-01-01T00:02:04.000Z"), SubscriptionBaseTransitionType.CREATE, 1L);
         final BillingEvent event1 = createEvent(subscription(ID_ZERO), new DateTime("2012-01-01T00:02:04.000Z"), SubscriptionBaseTransitionType.CANCEL, 2L);
         final BillingEvent event2 = createEvent(subscription(ID_ZERO), new DateTime("2012-01-01T00:02:04.000Z"), SubscriptionBaseTransitionType.CANCEL, 3L);
@@ -152,7 +151,7 @@ public class TestDefaultBillingEvent extends JunctionTestSuiteNoDB {
     }
 
     @Test(groups = "fast")
-    public void testEventOrderingMix() throws CatalogApiException {
+    public void testEventOrderingMix() {
         final BillingEvent event0 = createEvent(subscription(ID_ZERO), new DateTime("2012-01-01T00:02:04.000Z"), SubscriptionBaseTransitionType.CREATE);
         final BillingEvent event1 = createEvent(subscription(ID_ZERO), new DateTime("2012-01-02T00:02:04.000Z"), SubscriptionBaseTransitionType.CHANGE);
         final BillingEvent event2 = createEvent(subscription(ID_ONE), new DateTime("2012-01-01T00:02:04.000Z"), SubscriptionBaseTransitionType.CANCEL);
@@ -176,16 +175,17 @@ public class TestDefaultBillingEvent extends JunctionTestSuiteNoDB {
         Assert.assertEquals(event.toString(), "DefaultBillingEvent{type=CREATE, effectiveDate=2012-01-01T00:02:04.000Z, planPhaseName=Test-trial, subscriptionId=00000000-0000-0000-0000-000000000000, totalOrdering=1}");
     }
 
-    private BillingEvent createEvent(final SubscriptionBase sub, final DateTime effectiveDate, final SubscriptionBaseTransitionType type) throws CatalogApiException {
+    private BillingEvent createEvent(final SubscriptionBase sub, final DateTime effectiveDate, final SubscriptionBaseTransitionType type) {
         return createEvent(sub, effectiveDate, type, 1L);
     }
 
-    private BillingEvent createEvent(final SubscriptionBase sub, final DateTime effectiveDate, final SubscriptionBaseTransitionType type, final long totalOrdering) throws CatalogApiException {
+    private BillingEvent createEvent(final SubscriptionBase sub, final DateTime effectiveDate, final SubscriptionBaseTransitionType type, final long totalOrdering) {
         final int billCycleDay = 1;
 
         final Plan shotgun = new MockPlan();
         final PlanPhase shotgunMonthly = createMockMonthlyPlanPhase(null, BigDecimal.ZERO, PhaseType.TRIAL);
 
+        final Account account = new MockAccountBuilder().build();
         return new DefaultBillingEvent(sub, effectiveDate, true,
                                        shotgun, shotgunMonthly, BigDecimal.ZERO,
                                        Currency.USD, BillingPeriod.NO_BILLING_PERIOD, billCycleDay,

@@ -37,6 +37,8 @@ public class DefaultServerService implements ServerService {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultServerService.class);
 
+    public static final String SERVER_SERVICE = "server-service";
+
     private final PersistentBus bus;
     private final PushNotificationListener pushNotificationListener;
     private final PushNotificationRetryService pushNotificationRetryService;
@@ -52,12 +54,7 @@ public class DefaultServerService implements ServerService {
 
     @Override
     public String getName() {
-        return KILLBILL_SERVICES.SERVER_SERVICE.getServiceName();
-    }
-
-    @Override
-    public int getRegistrationOrdering() {
-        return KILLBILL_SERVICES.SERVER_SERVICE.getRegistrationOrdering();
+        return SERVER_SERVICE;
     }
 
     @LifecycleHandlerType(LifecycleLevel.INIT_SERVICE)

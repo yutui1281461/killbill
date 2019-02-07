@@ -1,9 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
  *
- * The Billing Project licenses this file to you under the Apache License, version 2.0
+ * Ning licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
  * License.  You may obtain a copy of the License at:
  *
@@ -18,11 +16,6 @@
 
 package org.killbill.billing.catalog.rules;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
-
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlIDREF;
 
@@ -33,8 +26,7 @@ import org.killbill.billing.catalog.api.PriceList;
 import org.killbill.billing.catalog.api.ProductCategory;
 import org.killbill.billing.catalog.api.rules.CasePriceList;
 
-public class DefaultCasePriceList extends DefaultCaseStandardNaming<DefaultPriceList> implements CasePriceList, Externalizable {
-
+public class DefaultCasePriceList extends DefaultCaseStandardNaming<DefaultPriceList> implements CasePriceList {
     @XmlElement(required = false, name = "fromProduct")
     @XmlIDREF
     private DefaultProduct fromProduct;
@@ -102,6 +94,7 @@ public class DefaultCasePriceList extends DefaultCaseStandardNaming<DefaultPrice
         return this;
     }
 
+
     public DefaultCasePriceList setToPriceList(final DefaultPriceList toPriceList) {
         this.toPriceList = toPriceList;
         return this;
@@ -151,6 +144,7 @@ public class DefaultCasePriceList extends DefaultCaseStandardNaming<DefaultPrice
         return result;
     }
 
+
     @Override
     public String toString() {
         return "DefaultCasePriceList {" +
@@ -160,31 +154,5 @@ public class DefaultCasePriceList extends DefaultCaseStandardNaming<DefaultPrice
                ", fromPriceList=" + fromPriceList +
                ", toPriceList=" + toPriceList +
                '}';
-    }
-
-    @Override
-    public void writeExternal(final ObjectOutput out) throws IOException {
-        super.writeExternal(out);
-        out.writeObject(fromProduct);
-        out.writeBoolean(fromProductCategory != null);
-        if (fromProductCategory != null) {
-            out.writeUTF(fromProductCategory.name());
-        }
-        out.writeBoolean(fromBillingPeriod != null);
-        if (fromBillingPeriod != null) {
-            out.writeUTF(fromBillingPeriod.name());
-        }
-        out.writeObject(fromPriceList);
-        out.writeObject(toPriceList);
-    }
-
-    @Override
-    public void readExternal(final ObjectInput in) throws IOException, ClassNotFoundException {
-        super.readExternal(in);
-        this.fromProduct = (DefaultProduct) in.readObject();
-        this.fromProductCategory = in.readBoolean() ? ProductCategory.valueOf(in.readUTF()) : null;
-        this.fromBillingPeriod = in.readBoolean() ? BillingPeriod.valueOf(in.readUTF()) : null;
-        this.fromPriceList = (DefaultPriceList) in.readObject();
-        this.toPriceList = (DefaultPriceList) in.readObject();
     }
 }

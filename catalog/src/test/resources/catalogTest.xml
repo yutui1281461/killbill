@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!--
   ~ Copyright 2010-2013 Ning, Inc.
-  ~ Copyright 2014-2018 Groupon, Inc
-  ~ Copyright 2014-2018 The Billing Project, LLC
   ~
-  ~ The Billing Project licenses this file to you under the Apache License, version 2.0
+  ~ Ning licenses this file to you under the Apache License, version 2.0
   ~ (the "License"); you may not use this file except in compliance with the
   ~ License.  You may obtain a copy of the License at:
   ~
@@ -17,13 +15,13 @@
   ~ under the License.
   -->
 
-<!-- Use cases covered so far: Tiered Product (Pistol/Shotgun/Assault-Rifle)
-	Multiple changeEvent plan policies Multiple PlanAlignment (see below, trial
-	add-on alignments and rescue discount package) Product transition rules Add
-	on (Scopes, Hoster) Multi-pack addon (Extra-Ammo) Addon Trial aligned to
-	base plan (holster-monthly-regular) Addon Trial aligned to creation (holster-monthly-special)
-	Rescue discount package (assault-rifle-annual-rescue) Plan phase with a reccurring
-	and a one off (refurbish-maintenance) Phan with more than 2 phase (gunclub
+<!-- Use cases covered so far: Tiered Product (Pistol/Shotgun/Assault-Rifle) 
+	Multiple changeEvent plan policies Multiple PlanAlignment (see below, trial 
+	add-on alignments and rescue discount package) Product transition rules Add 
+	on (Scopes, Hoster) Multi-pack addon (Extra-Ammo) Addon Trial aligned to 
+	base plan (holster-monthly-regular) Addon Trial aligned to creation (holster-monthly-special) 
+	Rescue discount package (assault-rifle-annual-rescue) Plan phase with a reccurring 
+	and a one off (refurbish-maintenance) Phan with more than 2 phase (gunclub 
 	discount plans) Use Cases to do: Tiered Add On Riskfree period -->
 <catalog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="CatalogSchema.xsd ">
@@ -41,13 +39,9 @@
 
     <units>
         <unit name="bullets"/>
-        <unit name="stones"/>
     </units>
 
     <products>
-        <product name="Knife">
-            <category>STANDALONE</category>
-        </product>
         <product name="Blowdart">
             <category>BASE</category>
         </product>
@@ -69,7 +63,6 @@
                 <addonProduct>Laser-Scope</addonProduct>
                 <addonProduct>Holster</addonProduct>
                 <addonProduct>Bullets</addonProduct>
-                <addonProduct>Cabinet</addonProduct>
             </available>
         </product>
         <product name="Assault-Rifle">
@@ -82,12 +75,6 @@
                 <addonProduct>Laser-Scope</addonProduct>
                 <addonProduct>Bullets</addonProduct>
             </available>
-        </product>
-        <product name="Trebuchet">
-            <category>BASE</category>
-        </product>
-        <product name="Cannon">
-            <category>BASE</category>
         </product>
         <product name="Cleaning">
             <category>ADD_ON</category>
@@ -108,9 +95,6 @@
             <category>ADD_ON</category>
         </product>
         <product name="Bullets">
-            <category>ADD_ON</category>
-        </product>
-        <product name="Cabinet">
             <category>ADD_ON</category>
         </product>
     </products>
@@ -187,11 +171,6 @@
         </createAlignment>
         <billingAlignment>
             <billingAlignmentCase>
-                <!-- For cabinet-triannual (add-on ACCOUNT aligned) -->
-                <billingPeriod>TRIANNUAL</billingPeriod>
-                <alignment>ACCOUNT</alignment>
-            </billingAlignmentCase>
-            <billingAlignmentCase>
                 <productCategory>ADD_ON</productCategory>
                 <alignment>BUNDLE</alignment>
             </billingAlignmentCase>
@@ -212,31 +191,6 @@
     </rules>
 
     <plans>
-        <plan name="knife-monthly-notrial">
-            <product>Knife</product>
-            <finalPhase type="EVERGREEN">
-                <duration>
-                    <unit>UNLIMITED</unit>
-                </duration>
-                <recurring>
-                    <billingPeriod>MONTHLY</billingPeriod>
-                    <recurringPrice>
-                        <price>
-                            <currency>USD</currency>
-                            <value>29.95</value>
-                        </price>
-                        <price>
-                            <currency>EUR</currency>
-                            <value>29.95</value>
-                        </price>
-                        <price>
-                            <currency>GBP</currency>
-                            <value>29.95</value>
-                        </price>
-                    </recurringPrice>
-                </recurring>
-            </finalPhase>
-        </plan>
         <plan name="blowdart-monthly-notrial">
             <product>Blowdart</product>
             <finalPhase type="EVERGREEN">
@@ -262,6 +216,7 @@
                 </recurring>
             </finalPhase>
         </plan>
+
         <plan name="pistol-monthly-notrial">
             <product>Pistol</product>
             <finalPhase type="EVERGREEN">
@@ -535,7 +490,7 @@
             </finalPhase>
         </plan>
 
-        <plan name="shotgun-monthly" prettyName="Shotgun Monthly">
+        <plan name="shotgun-monthly">
             <product>Shotgun</product>
             <initialPhases>
                 <phase type="TRIAL">
@@ -1307,14 +1262,14 @@
                 </recurring>
             </finalPhase>
         </plan>
-        <plan name="bullets-usage-in-arrear" prettyName="Bullet Monthly Plan">
+        <plan name="bullets-usage-in-arrear">
             <product>Bullets</product>
-            <finalPhase type="EVERGREEN" prettyName="Bullet Monthly Plan Evergreen">
+            <finalPhase type="EVERGREEN">
                 <duration>
                     <unit>UNLIMITED</unit>
                 </duration>
                 <usages>
-                    <usage name="bullets-usage-in-arrear-usage" prettyName="Bullet Usage In Arrear" billingMode="IN_ARREAR" usageType="CONSUMABLE">
+                    <usage name="bullets-usage-in-arrear-usage" billingMode="IN_ARREAR" usageType="CONSUMABLE">
                         <billingPeriod>MONTHLY</billingPeriod>
                         <tiers>
                             <tier>
@@ -1370,94 +1325,6 @@
             <plansAllowedInBundle>-1</plansAllowedInBundle>
             <!-- arbitrary number of these (multipack) -->
         </plan>
-        <plan name="cabinet-triannual">
-            <product>Cabinet</product>
-            <initialPhases>
-            </initialPhases>
-            <finalPhase type="EVERGREEN">
-                <duration>
-                    <unit>UNLIMITED</unit>
-                </duration>
-                <recurring>
-                    <billingPeriod>TRIANNUAL</billingPeriod>
-                    <recurringPrice>
-                        <price>
-                            <currency>USD</currency>
-                            <value>999.95</value>
-                        </price>
-                        <price>
-                            <currency>EUR</currency>
-                            <value>499.95</value>
-                        </price>
-                        <price>
-                            <currency>GBP</currency>
-                            <value>999.95</value>
-                        </price>
-                    </recurringPrice>
-                </recurring>
-            </finalPhase>
-        </plan>
-        <plan name="trebuchet-usage-in-arrear" prettyName="Trebuchet Monthly Plan">
-            <product>Trebuchet</product>
-            <finalPhase type="EVERGREEN">
-                <duration>
-                    <unit>UNLIMITED</unit>
-                </duration>
-                <usages>
-                    <usage name="trebuchet-in-arrear-usage" billingMode="IN_ARREAR" usageType="CAPACITY">
-                        <billingPeriod>MONTHLY</billingPeriod>
-                        <tiers>
-                            <tier>
-                                <limits>
-                                    <limit>
-                                        <unit>stones</unit>
-                                        <max>100</max>
-                                    </limit>
-                                </limits>
-                                <recurringPrice>
-                                    <price>
-                                        <currency>USD</currency>
-                                        <value>100</value>
-                                    </price>
-                                </recurringPrice>
-                            </tier>
-                            <tier>
-                                <limits>
-                                    <limit>
-                                        <unit>stones</unit>
-                                        <max>-1</max>
-                                    </limit>
-                                </limits>
-                                <recurringPrice>
-                                    <price>
-                                        <currency>USD</currency>
-                                        <value>1000</value>
-                                    </price>
-                                </recurringPrice>
-                            </tier>
-                        </tiers>
-                    </usage>
-                </usages>
-            </finalPhase>
-        </plan>
-        <plan name="cannon-monthly-in-arrear">
-            <product>Cannon</product>
-            <recurringBillingMode>IN_ARREAR</recurringBillingMode>
-            <finalPhase type="EVERGREEN">
-                <duration>
-                    <unit>UNLIMITED</unit>
-                </duration>
-                <recurring>
-                    <billingPeriod>MONTHLY</billingPeriod>
-                    <recurringPrice>
-                        <price>
-                            <currency>USD</currency>
-                            <value>500.00</value>
-                        </price>
-                    </recurringPrice>
-                </recurring>
-            </finalPhase>
-        </plan>
     </plans>
     <priceLists>
         <defaultPriceList name="DEFAULT">
@@ -1472,11 +1339,8 @@
                 <plan>pistol-quarterly</plan>
                 <plan>shotgun-annual</plan>
                 <plan>assault-rifle-annual</plan>
-                <plan>trebuchet-usage-in-arrear</plan>
-                <plan>cannon-monthly-in-arrear</plan>
                 <plan>laser-scope-monthly</plan>
                 <plan>telescopic-scope-monthly</plan>
-                <plan>cabinet-triannual</plan>
                 <plan>cleaning-monthly</plan>
                 <plan>extra-ammo-monthly</plan>
                 <plan>holster-monthly-regular</plan>
@@ -1509,7 +1373,6 @@
         </childPriceList>
         <childPriceList name="notrial">
             <plans>
-                <plan>knife-monthly-notrial</plan>
                 <plan>blowdart-monthly-notrial</plan>
                 <plan>pistol-monthly-notrial</plan>
             </plans>

@@ -17,8 +17,6 @@
 
 package org.killbill.billing.util.config.definition;
 
-import java.util.List;
-
 import org.killbill.billing.callcontext.InternalTenantContext;
 import org.skife.config.Config;
 import org.skife.config.Default;
@@ -27,11 +25,6 @@ import org.skife.config.Param;
 import org.skife.config.TimeSpan;
 
 public interface InvoiceConfig extends KillbillConfig {
-
-    public enum UsageDetailMode {
-        AGGREGATE,
-        DETAIL,
-    }
 
     @Config("org.killbill.invoice.maxNumberOfMonthsInFuture")
     @Default("36")
@@ -88,16 +81,6 @@ public interface InvoiceConfig extends KillbillConfig {
     @Description("Maximum number of times the system will retry to grab global lock (with a 100ms wait each time)")
     int getMaxGlobalLockRetries();
 
-    @Config("org.killbill.invoice.plugin")
-    @Default("")
-    @Description("Default invoice plugin names")
-    List<String> getInvoicePluginNames();
-
-    @Config("org.killbill.invoice.plugin")
-    @Default("")
-    @Description("Default invoice plugin names")
-    List<String> getInvoicePluginNames(@Param("dummy") final InternalTenantContext tenantContext);
-
     @Config("org.killbill.invoice.emailNotificationsEnabled")
     @Default("false")
     @Description("Whether to send email notifications on invoice creation (for configured accounts)")
@@ -108,28 +91,8 @@ public interface InvoiceConfig extends KillbillConfig {
     @Description("Whether the invoicing system is enabled")
     boolean isInvoicingSystemEnabled();
 
-    @Config("org.killbill.invoice.parent.commit.local.utc.time")
-    @Default("23:59:59.999")
-    @Description("UTC Time when parent invoice gets committed")
-    String getParentAutoCommitUtcTime();
-
-    @Config("org.killbill.invoice.parent.commit.local.utc.time")
-    @Default("23:59:59.999")
-    @Description("UTC Time when parent invoice gets committed")
-    String getParentAutoCommitUtcTime(@Param("dummy") final InternalTenantContext tenantContext);
-
     @Config("org.killbill.invoice.enabled")
     @Default("true")
     @Description("Whether the invoicing system is enabled")
     boolean isInvoicingSystemEnabled(@Param("dummy") final InternalTenantContext tenantContext);
-
-    @Config("org.killbill.invoice.item.result.behavior.mode")
-    @Default("AGGREGATE")
-    @Description("How the result for an item will be reported (aggregate mode or detail mode). ")
-    UsageDetailMode getItemResultBehaviorMode();
-
-    @Config("org.killbill.invoice.item.result.behavior.mode")
-    @Default("AGGREGATE")
-    @Description("How the result for an item will be reported (aggregate mode or detail mode). ")
-    UsageDetailMode getItemResultBehaviorMode(@Param("dummy") final InternalTenantContext tenantContext);
 }

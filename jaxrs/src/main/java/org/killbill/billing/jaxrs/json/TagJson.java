@@ -17,7 +17,6 @@
 package org.killbill.billing.jaxrs.json;
 
 import java.util.List;
-import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -28,24 +27,25 @@ import org.killbill.billing.util.tag.TagDefinition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-@ApiModel(value="Tag", parent = JsonBase.class)
 public class TagJson extends JsonBase {
 
-    private final UUID tagId;
+    @ApiModelProperty(dataType = "java.util.UUID")
+    private final String tagId;
     @ApiModelProperty(dataType = "org.killbill.billing.ObjectType")
     private final ObjectType objectType;
-    private final UUID objectId;
-    private final UUID tagDefinitionId;
+    @ApiModelProperty(dataType = "java.util.UUID")
+    private final String objectId;
+    @ApiModelProperty(dataType = "java.util.UUID")
+    private final String tagDefinitionId;
     private final String tagDefinitionName;
 
     @JsonCreator
-    public TagJson(@JsonProperty("tagId") final UUID tagId,
+    public TagJson(@JsonProperty("tagId") final String tagId,
                    @JsonProperty("objectType") final ObjectType objectType,
-                   @JsonProperty("objectId") final UUID objectId,
-                   @JsonProperty("tagDefinitionId") final UUID tagDefinitionId,
+                   @JsonProperty("objectId") final String objectId,
+                   @JsonProperty("tagDefinitionId") final String tagDefinitionId,
                    @JsonProperty("tagDefinitionName") final String tagDefinitionName,
                    @JsonProperty("auditLogs") @Nullable final List<AuditLogJson> auditLogs) {
         super(auditLogs);
@@ -57,10 +57,10 @@ public class TagJson extends JsonBase {
     }
 
     public TagJson(final Tag tag, final TagDefinition tagDefinition, @Nullable final List<AuditLog> auditLogs) {
-        this(tag.getId(), tag.getObjectType(), tag.getObjectId(), tagDefinition.getId(), tagDefinition.getName(), toAuditLogJson(auditLogs));
+        this(tag.getId().toString(), tag.getObjectType(), tag.getObjectId().toString(), tagDefinition.getId().toString(), tagDefinition.getName(), toAuditLogJson(auditLogs));
     }
 
-    public UUID getTagId() {
+    public String getTagId() {
         return tagId;
     }
 
@@ -68,7 +68,7 @@ public class TagJson extends JsonBase {
         return objectType;
     }
 
-    public UUID getTagDefinitionId() {
+    public String getTagDefinitionId() {
         return tagDefinitionId;
     }
 
@@ -76,7 +76,7 @@ public class TagJson extends JsonBase {
         return tagDefinitionName;
     }
 
-    public UUID getObjectId() {
+    public String getObjectId() {
         return objectId;
     }
 

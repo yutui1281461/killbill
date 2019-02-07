@@ -28,6 +28,7 @@ import org.killbill.bus.api.PersistentBus;
 
 public class DefaultBeatrixService implements BeatrixService {
 
+    public static final String BEATRIX_SERVICE_NAME = "beatrix-service";
 
     private final BeatrixListener beatrixListener;
     private final PersistentBus eventBus;
@@ -40,12 +41,7 @@ public class DefaultBeatrixService implements BeatrixService {
 
     @Override
     public String getName() {
-        return KILLBILL_SERVICES.BEATRIX_SERVICE.getServiceName();
-    }
-
-    @Override
-    public int getRegistrationOrdering() {
-        return KILLBILL_SERVICES.BEATRIX_SERVICE.getRegistrationOrdering();
+        return BEATRIX_SERVICE_NAME;
     }
 
     @LifecycleHandlerType(LifecycleLevel.INIT_SERVICE)

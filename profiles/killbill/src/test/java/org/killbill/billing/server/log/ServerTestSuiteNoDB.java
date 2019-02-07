@@ -17,6 +17,7 @@
 
 package org.killbill.billing.server.log;
 
+import org.killbill.billing.GuicyKillbillTestModule;
 import org.killbill.billing.GuicyKillbillTestSuiteNoDB;
 import org.testng.annotations.BeforeClass;
 
@@ -27,11 +28,7 @@ public abstract class ServerTestSuiteNoDB extends GuicyKillbillTestSuiteNoDB {
 
     @BeforeClass(groups = "fast")
     protected void beforeClass() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
-        final Injector injector = Guice.createInjector(new TestServerModuleNoDB(configSource, clock));
+        final Injector injector = Guice.createInjector(new TestServerModuleNoDB(configSource));
         injector.injectMembers(this);
     }
 }

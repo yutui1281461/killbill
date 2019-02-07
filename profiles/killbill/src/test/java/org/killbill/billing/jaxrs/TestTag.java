@@ -18,7 +18,6 @@
 
 package org.killbill.billing.jaxrs;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,24 +28,18 @@ import org.killbill.billing.ObjectType;
 import org.killbill.billing.catalog.api.BillingPeriod;
 import org.killbill.billing.catalog.api.ProductCategory;
 import org.killbill.billing.client.KillBillClientException;
+import org.killbill.billing.client.model.Account;
+import org.killbill.billing.client.model.Subscription;
+import org.killbill.billing.client.model.Tag;
+import org.killbill.billing.client.model.TagDefinition;
 import org.killbill.billing.client.model.Tags;
-import org.killbill.billing.client.model.gen.Account;
-import org.killbill.billing.client.model.gen.AuditLog;
-import org.killbill.billing.client.model.gen.Subscription;
-import org.killbill.billing.client.model.gen.Tag;
-import org.killbill.billing.client.model.gen.TagDefinition;
 import org.killbill.billing.util.api.AuditLevel;
-import org.killbill.billing.util.audit.ChangeType;
 import org.killbill.billing.util.tag.ControlTagType;
 import org.killbill.billing.util.tag.dao.SystemTags;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import com.ning.http.util.UTF8UrlEncoder;
-
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
@@ -56,24 +49,26 @@ public class TestTag extends TestJaxrsBase {
 
     @Test(groups = "slow", description = "Cannot add badly formatted TagDefinition")
     public void testTagErrorHandling() throws Exception {
-        final TagDefinition[] tagDefinitions = {new TagDefinition(null, false, null, null, ImmutableList.<ObjectType>of(ObjectType.ACCOUNT), null),
-                                                new TagDefinition(null, false, "something", null, ImmutableList.<ObjectType>of(ObjectType.INVOICE), null),
-                                                new TagDefinition(null, false, null, "something", ImmutableList.<ObjectType>of(ObjectType.TRANSACTION), null)};
+        final TagDefinition[] tagDefinitions = {new TagDefinition(null, false, null, null, null),
+                                                new TagDefinition(null, false, "something", null, null),
+                                                new TagDefinition(null, false, null, "something", null)};
 
         for (final TagDefinition tagDefinition : tagDefinitions) {
             try {
-                tagDefinitionApi.createTagDefinition(tagDefinition, requestOptions);
+                killBillClient.createTagDefinition(tagDefinition, requestOptions);
                 fail();
             } catch (final KillBillClientException e) {
             }
         }
     }
 
+
+
     @Test(groups = "slow", description = "Can create a TagDefinition")
     public void testTagDefinitionOk() throws Exception {
-        final TagDefinition input = new TagDefinition(null, false, "blue", "relaxing color", ImmutableList.<ObjectType>of(ObjectType.TRANSACTION), null);
+        final TagDefinition input = new TagDefinition(null, false, "blue", "relaxing color", ImmutableList.<ObjectType>of());
 
-        final TagDefinition objFromJson = tagDefinitionApi.createTagDefinition(input, requestOptions);
+        final TagDefinition objFromJson = killBillClient.createTagDefinition(input, requestOptions);
         assertNotNull(objFromJson);
         assertEquals(objFromJson.getName(), input.getName());
         assertEquals(objFromJson.getDescription(), input.getDescription());
@@ -81,31 +76,33 @@ public class TestTag extends TestJaxrsBase {
 
     @Test(groups = "slow", description = "Can create and delete TagDefinitions")
     public void testMultipleTagDefinitionOk() throws Exception {
-        List<TagDefinition> objFromJson = tagDefinitionApi.getTagDefinitions(requestOptions);
+        List<TagDefinition> objFromJson = killBillClient.getTagDefinitions(requestOptions);
         final int sizeSystemTag = objFromJson.isEmpty() ? 0 : objFromJson.size();
 
-        final TagDefinition inputBlue = new TagDefinition(null, false, "blue", "relaxing color", ImmutableList.<ObjectType>of(ObjectType.TRANSACTION), null);
-        tagDefinitionApi.createTagDefinition(inputBlue, requestOptions);
 
-        final TagDefinition inputRed = new TagDefinition(null, false, "red", "hot color", ImmutableList.<ObjectType>of(ObjectType.TRANSACTION), null);
-        tagDefinitionApi.createTagDefinition(inputRed, requestOptions);
+        final TagDefinition inputBlue = new TagDefinition(null, false, "blue", "relaxing color", ImmutableList.<ObjectType>of());
+        killBillClient.createTagDefinition(inputBlue, requestOptions);
 
-        final TagDefinition inputYellow = new TagDefinition(null, false, "yellow", "vibrant color", ImmutableList.<ObjectType>of(ObjectType.TRANSACTION), null);
-        tagDefinitionApi.createTagDefinition(inputYellow, requestOptions);
+        final TagDefinition inputRed = new TagDefinition(null, false, "red", "hot color", ImmutableList.<ObjectType>of());
+        killBillClient.createTagDefinition(inputRed, requestOptions);
 
-        final TagDefinition inputGreen = new TagDefinition(null, false, "green", "super relaxing color", ImmutableList.<ObjectType>of(ObjectType.TRANSACTION), null);
-        tagDefinitionApi.createTagDefinition(inputGreen, requestOptions);
+        final TagDefinition inputYellow = new TagDefinition(null, false, "yellow", "vibrant color", ImmutableList.<ObjectType>of());
+        killBillClient.createTagDefinition(inputYellow, requestOptions);
 
-        objFromJson = tagDefinitionApi.getTagDefinitions(requestOptions);
+        final TagDefinition inputGreen = new TagDefinition(null, false, "green", "super relaxing color", ImmutableList.<ObjectType>of());
+        killBillClient.createTagDefinition(inputGreen, requestOptions);
+
+        objFromJson = killBillClient.getTagDefinitions(requestOptions);
         assertNotNull(objFromJson);
         assertEquals(objFromJson.size(), 4 + sizeSystemTag);
 
-        tagDefinitionApi.deleteTagDefinition(objFromJson.get(0).getId(), requestOptions);
+        killBillClient.deleteTagDefinition(objFromJson.get(0).getId(), requestOptions);
 
-        objFromJson = tagDefinitionApi.getTagDefinitions(requestOptions);
+        objFromJson = killBillClient.getTagDefinitions(requestOptions);
         assertNotNull(objFromJson);
         assertEquals(objFromJson.size(), 3 + sizeSystemTag);
     }
+
 
     @Test(groups = "slow", description = "Can search all tags for an account")
     public void testGetAllTagsByType() throws Exception {
@@ -115,54 +112,43 @@ public class TestTag extends TestJaxrsBase {
 
         final Account account = createAccountWithDefaultPaymentMethod();
 
-        final Subscription subscriptionJson = createSubscription(account.getAccountId(), "87544332", "Shotgun",
+        final Subscription subscriptionJson = createEntitlement(account.getAccountId(), "87544332", "Shotgun",
                                                                 ProductCategory.BASE, BillingPeriod.MONTHLY, true);
 
-        int nbAllowedControlTagType = 0;
         for (final ControlTagType controlTagType : ControlTagType.values()) {
-            if (controlTagType.getApplicableObjectTypes().contains(ObjectType.ACCOUNT)) {
-                accountApi.createAccountTags(account.getAccountId(), ImmutableList.<UUID>of(controlTagType.getId()), requestOptions);
-                nbAllowedControlTagType++;
-            }
+            killBillClient.createAccountTag(account.getAccountId(), controlTagType.getId(), requestOptions);
         }
 
-        final TagDefinition bundleTagDefInput = new TagDefinition(null, false, "bundletagdef", "nothing special", ImmutableList.<ObjectType>of(ObjectType.TRANSACTION), null);
-        final TagDefinition bundleTagDef = tagDefinitionApi.createTagDefinition(bundleTagDefInput, requestOptions);
+        final TagDefinition bundleTagDefInput = new TagDefinition(null, false, "bundletagdef", "nothing special", ImmutableList.<ObjectType>of());
+        final TagDefinition bundleTagDef = killBillClient.createTagDefinition(bundleTagDefInput, requestOptions);
 
-        bundleApi.createBundleTags(subscriptionJson.getBundleId(), ImmutableList.<UUID>of(bundleTagDef.getId()), requestOptions);
+        killBillClient.createBundleTag(subscriptionJson.getBundleId(), bundleTagDef.getId(), requestOptions);
 
-        final Tags allBundleTags = bundleApi.getBundleTags(subscriptionJson.getBundleId(), requestOptions);
+        final Tags allBundleTags = killBillClient.getBundleTags(subscriptionJson.getBundleId(), AuditLevel.FULL, requestOptions);
         Assert.assertEquals(allBundleTags.size(), 1);
 
-        final Tags allAccountTags = accountApi.getAllTags(account.getAccountId(), null, requestOptions);
-        Assert.assertEquals(allAccountTags.size(), nbAllowedControlTagType + 1);
+        final Tags allAccountTags = killBillClient.getAllAccountTags(account.getAccountId(), null, AuditLevel.FULL, requestOptions);
+        Assert.assertEquals(allAccountTags.size(), ControlTagType.values().length + 1);
 
-        final Tags allBundleTagsForAccount = accountApi.getAllTags(account.getAccountId(), ObjectType.BUNDLE, requestOptions);
+
+        final Tags allBundleTagsForAccount = killBillClient.getAllAccountTags(account.getAccountId(), ObjectType.BUNDLE.name(), AuditLevel.FULL, requestOptions);
         Assert.assertEquals(allBundleTagsForAccount.size(), 1);
     }
+
 
     @Test(groups = "slow", description = "Can search system tags")
     public void testSystemTagsPagination() throws Exception {
         final Account account = createAccount();
-
-        int nbAllowedControlTagType = 0;
         for (final ControlTagType controlTagType : ControlTagType.values()) {
-            if (controlTagType.getApplicableObjectTypes().contains(ObjectType.ACCOUNT)) {
-                accountApi.createAccountTags(account.getAccountId(), ImmutableList.<UUID>of(controlTagType.getId()), requestOptions);
-                nbAllowedControlTagType++;
-            }
+            killBillClient.createAccountTag(account.getAccountId(), controlTagType.getId(), requestOptions);
         }
 
-        final Tags allTags = accountApi.getAccountTags(account.getAccountId(), requestOptions);
-        Assert.assertEquals(allTags.size(), nbAllowedControlTagType);
+        final Tags allTags = killBillClient.getTags(requestOptions);
+        Assert.assertEquals(allTags.size(), ControlTagType.values().length);
 
         for (final ControlTagType controlTagType : ControlTagType.values()) {
-            if (controlTagType.getApplicableObjectTypes().contains(ObjectType.ACCOUNT)) {
-                Assert.assertEquals(tagApi.searchTags(controlTagType.toString(), requestOptions).size(), 1);
-                // TODO Hack until we fix client api
-
-                Assert.assertEquals(tagApi.searchTags(UTF8UrlEncoder.encodePath(controlTagType.getDescription()), requestOptions).size(), 1);
-            }
+            Assert.assertEquals(killBillClient.searchTags(controlTagType.toString(), requestOptions).size(), 1);
+            Assert.assertEquals(killBillClient.searchTags(controlTagType.getDescription(), requestOptions).size(), 1);
         }
     }
 
@@ -172,86 +158,30 @@ public class TestTag extends TestJaxrsBase {
         final Account account = createAccount();
 
         try {
-            accountApi.createAccountTags(account.getAccountId(), ImmutableList.<UUID>of(SystemTags.PARK_TAG_DEFINITION_ID), requestOptions);
+            killBillClient.createAccountTag(account.getAccountId(), SystemTags.PARK_TAG_DEFINITION_ID, requestOptions);
             Assert.fail("Creating a tag associated with a system tag should fail");
         } catch (final Exception e) {
             Assert.assertTrue(true);
         }
     }
 
-    @Test(groups = "slow", description = "Cannot create a control tag against wrong object type")
-    public void testNotApplicableType() throws Exception {
-
-        final Account account = createAccount();
-        try {
-            accountApi.createAccountTags(account.getAccountId(), ImmutableList.<UUID>of(ControlTagType.WRITTEN_OFF.getId()), requestOptions);
-            Assert.fail("Creating a (control) tag against a wrong object type should fail");
-        } catch (final Exception e) {
-            Assert.assertTrue(true);
-        }
-    }
-
-
-
-    @Test(groups = "slow", description = "retrieve account logs")
-    public void testGetTagAuditLogsWithHistory() throws Exception {
-        final Account accountJson = createAccount();
-        assertNotNull(accountJson);
-        final TagDefinition accountTagDefInput = new TagDefinition()
-                .setName("tag_name")
-                .setDescription("nothing special")
-                .setApplicableObjectTypes(ImmutableList.<ObjectType>of(ObjectType.ACCOUNT));
-
-        final TagDefinition accountTagDef = tagDefinitionApi.createTagDefinition(accountTagDefInput, requestOptions);
-        accountApi.createAccountTags(accountJson.getAccountId(), ImmutableList.<UUID>of(accountTagDef.getId()), requestOptions);
-
-        // get all audit for the account
-        final List<AuditLog> auditLogsJson = accountApi.getAccountAuditLogs(accountJson.getAccountId(), requestOptions);
-        Assert.assertEquals(auditLogsJson.size(), 2);
-        UUID objectId = null;
-        for (AuditLog auditLog : auditLogsJson) {
-            if (auditLog.getObjectType().equals(ObjectType.TAG)) {
-                objectId = auditLog.getObjectId();
-                break;
-            }
-        }
-        assertNotNull(objectId);
-        final List<AuditLog> tagAuditLogWithHistories = tagApi.getTagAuditLogsWithHistory(objectId, requestOptions);
-        assertEquals(tagAuditLogWithHistories.size(), 1);
-        assertEquals(tagAuditLogWithHistories.get(0).getChangeType(), ChangeType.INSERT.toString());
-        assertEquals(tagAuditLogWithHistories.get(0).getObjectType(), ObjectType.TAG);
-        assertEquals(tagAuditLogWithHistories.get(0).getObjectId(), objectId);
-
-        final LinkedHashMap history1 = (LinkedHashMap) tagAuditLogWithHistories.get(0).getHistory();
-        assertNotNull(history1);
-        assertEquals(history1.get("tagDefinitionId"), accountTagDef.getId().toString());
-        assertEquals(history1.get("objectId"), accountJson.getAccountId().toString());
-        assertEquals(history1.get("objectType"), ObjectType.ACCOUNT.toString());
-    }
-
     @Test(groups = "slow", description = "Can paginate through all tags")
     public void testTagsPagination() throws Exception {
         final Account account = createAccount();
         for (int i = 0; i < 5; i++) {
-            final TagDefinition tagDefinition = new TagDefinition(null, false, UUID.randomUUID().toString().substring(0, 5), UUID.randomUUID().toString(), ImmutableList.<ObjectType>of(ObjectType.ACCOUNT), null);
-            final UUID tagDefinitionId = tagDefinitionApi.createTagDefinition(tagDefinition, requestOptions).getId();
-            accountApi.createAccountTags(account.getAccountId(), ImmutableList.<UUID>of(tagDefinitionId), requestOptions);
+            final TagDefinition tagDefinition = new TagDefinition(null, false, UUID.randomUUID().toString().substring(0, 5), UUID.randomUUID().toString(), ImmutableList.<ObjectType>of(ObjectType.ACCOUNT));
+            final UUID tagDefinitionId = killBillClient.createTagDefinition(tagDefinition, requestOptions).getId();
+            killBillClient.createAccountTag(account.getAccountId(), tagDefinitionId, requestOptions);
         }
 
-        final Tags allTags = accountApi.getAccountTags(account.getAccountId(), requestOptions);
+        final Tags allTags = killBillClient.getTags(requestOptions);
         Assert.assertEquals(allTags.size(), 5);
 
-        Tags page = tagApi.getTags(0L, 1L, AuditLevel.NONE, requestOptions);
+        Tags page = killBillClient.getTags(0L, 1L, requestOptions);
         for (int i = 0; i < 5; i++) {
             Assert.assertNotNull(page);
             Assert.assertEquals(page.size(), 1);
-            final Tag targetTag = page.get(0);
-            Assert.assertTrue(Iterables.any(allTags, new Predicate<Tag>() {
-                @Override
-                public boolean apply(@Nullable final Tag input) {
-                    return input.equals(targetTag);
-                }
-            }));
+            Assert.assertEquals(page.get(0), allTags.get(i));
             page = page.getNext();
         }
         Assert.assertNull(page);
@@ -261,11 +191,11 @@ public class TestTag extends TestJaxrsBase {
             doSearchTag(tag.getTagId().toString(), tag);
             doSearchTag(tag.getTagDefinitionName(), tag);
 
-            final TagDefinition tagDefinition = tagDefinitionApi.getTagDefinition(tag.getTagDefinitionId(), requestOptions);
+            final TagDefinition tagDefinition = killBillClient.getTagDefinition(tag.getTagDefinitionId(), requestOptions);
             doSearchTag(tagDefinition.getDescription(), tag);
         }
 
-        final Tags tags = tagApi.searchTags(ObjectType.ACCOUNT.toString(), requestOptions);
+        final Tags tags = killBillClient.searchTags(ObjectType.ACCOUNT.toString(), requestOptions);
         Assert.assertEquals(tags.size(), 5);
         Assert.assertEquals(tags.getPaginationCurrentOffset(), 0);
         Assert.assertEquals(tags.getPaginationTotalNbRecords(), 5);
@@ -273,7 +203,7 @@ public class TestTag extends TestJaxrsBase {
     }
 
     private void doSearchTag(final String searchKey, @Nullable final Tag expectedTag) throws KillBillClientException {
-        final Tags tags = tagApi.searchTags(searchKey, requestOptions);
+        final Tags tags = killBillClient.searchTags(searchKey, requestOptions);
         if (expectedTag == null) {
             Assert.assertTrue(tags.isEmpty());
             Assert.assertEquals(tags.getPaginationCurrentOffset(), 0);

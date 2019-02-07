@@ -18,12 +18,10 @@
 package org.killbill.billing.catalog;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 import org.killbill.billing.catalog.api.Currency;
 import org.killbill.billing.catalog.api.PlanPhasePriceOverride;
 import org.killbill.billing.catalog.api.PlanPhaseSpecifier;
-import org.killbill.billing.catalog.api.UsagePriceOverride;
 
 public class DefaultPlanPhasePriceOverride implements PlanPhasePriceOverride {
 
@@ -32,24 +30,21 @@ public class DefaultPlanPhasePriceOverride implements PlanPhasePriceOverride {
     private final Currency currency;
     private final BigDecimal fixedPrice;
     private final BigDecimal recurringPrice;
-    private final List<UsagePriceOverride> usagePriceOverrides;
 
-    public DefaultPlanPhasePriceOverride(final PlanPhaseSpecifier planPhaseSpecifier, final Currency currency, final BigDecimal fixedPrice, final BigDecimal recurringPrice, final List<UsagePriceOverride> usagePriceOverrides) {
+    public DefaultPlanPhasePriceOverride(final PlanPhaseSpecifier planPhaseSpecifier, final Currency currency, final BigDecimal fixedPrice, final BigDecimal recurringPrice) {
         this.phaseName = null;
         this.planPhaseSpecifier = planPhaseSpecifier;
         this.currency = currency;
         this.fixedPrice = fixedPrice;
         this.recurringPrice = recurringPrice;
-        this.usagePriceOverrides = usagePriceOverrides;
     }
 
-    public DefaultPlanPhasePriceOverride(final String phaseName, final Currency currency, final BigDecimal fixedPrice, final BigDecimal recurringPrice, List<UsagePriceOverride> usagePriceOverrides) {
+    public DefaultPlanPhasePriceOverride(final String phaseName, final Currency currency, final BigDecimal fixedPrice, final BigDecimal recurringPrice) {
         this.phaseName = phaseName;
         this.planPhaseSpecifier = null;
         this.currency = currency;
         this.fixedPrice = fixedPrice;
         this.recurringPrice = recurringPrice;
-        this.usagePriceOverrides = usagePriceOverrides;
     }
 
     @Override
@@ -75,10 +70,5 @@ public class DefaultPlanPhasePriceOverride implements PlanPhasePriceOverride {
     @Override
     public BigDecimal getRecurringPrice() {
         return recurringPrice;
-    }
-
-    @Override
-    public List<UsagePriceOverride> getUsagePriceOverrides() {
-        return usagePriceOverrides;
     }
 }

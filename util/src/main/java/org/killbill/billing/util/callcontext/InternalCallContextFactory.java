@@ -51,7 +51,6 @@ public class InternalCallContextFactory {
 
     public static final String MDC_KB_ACCOUNT_RECORD_ID = "kb.accountRecordId";
     public static final String MDC_KB_TENANT_RECORD_ID = "kb.tenantRecordId";
-    public static final String MDC_KB_USER_TOKEN = "kb.userToken";
 
     private final ImmutableAccountInternalApi accountInternalApi;
     private final Clock clock;
@@ -87,15 +86,13 @@ public class InternalCallContextFactory {
     //
 
     public TenantContext createTenantContext(final InternalTenantContext context) {
-        final UUID accountId = getAccountIdSafe(context);
         final UUID tenantId = getTenantIdSafe(context);
-        return context.toTenantContext(accountId, tenantId);
+        return context.toTenantContext(tenantId);
     }
 
     public CallContext createCallContext(final InternalCallContext context) {
-        final UUID accountId = getAccountIdSafe(context);
         final UUID tenantId = getTenantIdSafe(context);
-        return context.toCallContext(accountId, tenantId);
+        return context.toCallContext(tenantId);
     }
 
     //
@@ -154,7 +151,7 @@ public class InternalCallContextFactory {
      * @return internal tenant callcontext
      */
     public InternalTenantContext createInternalTenantContext(final Long tenantRecordId, @Nullable final Long accountRecordId) {
-        populateMDCContext(null, accountRecordId, tenantRecordId);
+        populateMDCContext(accountRecordId, tenantRecordId);
 
         if (accountRecordId == null) {
             return new InternalTenantContext(tenantRecordId);
@@ -198,25 +195,16 @@ public class InternalCallContextFactory {
         //Preconditions.checkState(tenantRecordIdFromContext.equals(tenantRecordIdFromObject),
         //                         "tenant of the pointed object (%s) and the callcontext (%s) don't match!", tenantRecordIdFromObject, tenantRecordIdFromContext);
 
-        final Long tenantRecordId = getTenantRecordIdSafe(context);
-        final Long accountRecordId = getAccountRecordIdSafe(objectId, objectType, context);
-        return createInternalCallContext(tenantRecordId,
-                                         accountRecordId,
-                                         context.getUserName(),
-                                         context.getCallOrigin(),
-                                         context.getUserType(),
-                                         context.getUserToken(),
-                                         context.getReasonCode(),
-                                         context.getComments(),
-                                         context.getCreatedDate(),
-                                         context.getUpdatedDate());
+        return createInternalCallContext(objectId, objectType, context.getUserName(), context.getCallOrigin(),
+                                         context.getUserType(), context.getUserToken(), context.getReasonCode(), context.getComments(),
+                                         context);
     }
 
     // Used by the payment retry service
     public InternalCallContext createInternalCallContext(final UUID objectId, final ObjectType objectType, final String userName,
                                                          final CallOrigin callOrigin, final UserType userType, @Nullable final UUID userToken, final Long tenantRecordId) {
         final Long accountRecordId = getAccountRecordIdSafe(objectId, objectType, tenantRecordId);
-        return createInternalCallContext(tenantRecordId, accountRecordId, userName, callOrigin, userType, userToken, null, null, null, null);
+        return createInternalCallContext(tenantRecordId, accountRecordId, userName, callOrigin, userType, userToken, null, null);
     }
 
     /**
@@ -234,7 +222,7 @@ public class InternalCallContextFactory {
      */
     public InternalCallContext createInternalCallContext(@Nullable final Long tenantRecordId, @Nullable final Long accountRecordId, final String userName,
                                                          final CallOrigin callOrigin, final UserType userType, @Nullable final UUID userToken) {
-        return createInternalCallContext(tenantRecordId, accountRecordId, userName, callOrigin, userType, userToken, null, null, null, null);
+        return createInternalCallContext(tenantRecordId, accountRecordId, userName, callOrigin, userType, userToken, null, null);
     }
 
     /**
@@ -249,8 +237,8 @@ public class InternalCallContextFactory {
     public InternalCallContext createInternalCallContextWithoutAccountRecordId(final CallContext context) {
         // If tenant id is null, this will default to the default tenant record id (multi-tenancy disabled)
         final Long tenantRecordId = getTenantRecordIdSafe(context);
-        populateMDCContext(context.getUserToken(), null, tenantRecordId);
-        return new InternalCallContext(tenantRecordId, context, context.getCreatedDate());
+        populateMDCContext(null, tenantRecordId);
+        return new InternalCallContext(tenantRecordId, context, clock.getUTCNow());
     }
 
     // Used when we need to re-hydrate the callcontext with the account_record_id (when creating the account)
@@ -258,34 +246,37 @@ public class InternalCallContextFactory {
         final ImmutableAccountData immutableAccountData = getImmutableAccountData(accountRecordId, context.getTenantRecordId());
         final DateTimeZone fixedOffsetTimeZone = immutableAccountData.getFixedOffsetTimeZone();
         final DateTime referenceTime = immutableAccountData.getReferenceTime();
-        populateMDCContext(context.getUserToken(), accountRecordId, context.getTenantRecordId());
-        return new InternalCallContext(context, accountRecordId, fixedOffsetTimeZone, referenceTime, context.getCreatedDate());
+        populateMDCContext(accountRecordId, context.getTenantRecordId());
+        return new InternalCallContext(context, accountRecordId, fixedOffsetTimeZone, referenceTime, clock.getUTCNow());
     }
 
     // Used during the account creation transaction (account not visible outside of the transaction yet)
     public InternalCallContext createInternalCallContext(final TimeZoneAwareEntity accountModelDao, final Long accountRecordId, final InternalCallContext context) {
         // See DefaultImmutableAccountData implementation
         final DateTimeZone fixedOffsetTimeZone = AccountDateTimeUtils.getFixedOffsetTimeZone(accountModelDao);
-        final DateTime referenceTime = accountModelDao.getReferenceTime();
-        populateMDCContext(context.getUserToken(), accountRecordId, context.getTenantRecordId());
-        return new InternalCallContext(context, accountRecordId, fixedOffsetTimeZone, referenceTime, context.getCreatedDate());
+        final DateTime referenceTime = AccountDateTimeUtils.getReferenceDateTime(accountModelDao);
+        populateMDCContext(accountRecordId, context.getTenantRecordId());
+        return new InternalCallContext(context, accountRecordId, fixedOffsetTimeZone, referenceTime, clock.getUTCNow());
     }
 
     public InternalCallContext createInternalCallContext(final DateTimeZone fixedOffsetTimeZone, final DateTime referenceTime, final Long accountRecordId, final InternalCallContext context) {
-        populateMDCContext(context.getUserToken(), accountRecordId, context.getTenantRecordId());
-        return new InternalCallContext(context, accountRecordId, fixedOffsetTimeZone, referenceTime, context.getCreatedDate());
+        populateMDCContext(accountRecordId, context.getTenantRecordId());
+        return new InternalCallContext(context, accountRecordId, fixedOffsetTimeZone, referenceTime, clock.getUTCNow());
     }
 
-    private InternalCallContext createInternalCallContext(@Nullable final Long tenantRecordId,
-                                                          @Nullable final Long accountRecordId,
-                                                          final String userName,
-                                                          final CallOrigin callOrigin,
-                                                          final UserType userType,
-                                                          @Nullable final UUID userToken,
-                                                          @Nullable final String reasonCode,
-                                                          @Nullable final String comment,
-                                                          @Nullable final DateTime createdDate,
-                                                          @Nullable final DateTime updatedDate) {
+    private InternalCallContext createInternalCallContext(final UUID objectId, final ObjectType objectType, final String userName,
+                                                          final CallOrigin callOrigin, final UserType userType, @Nullable final UUID userToken,
+                                                          @Nullable final String reasonCode, @Nullable final String comment,
+                                                          final TenantContext tenantContext) {
+        final Long tenantRecordId = getTenantRecordIdSafe(tenantContext);
+        final Long accountRecordId = getAccountRecordIdSafe(objectId, objectType, tenantContext);
+        return createInternalCallContext(tenantRecordId, accountRecordId, userName, callOrigin, userType, userToken,
+                                         reasonCode, comment);
+    }
+
+    private InternalCallContext createInternalCallContext(@Nullable final Long tenantRecordId, @Nullable final Long accountRecordId, final String userName,
+                                                          final CallOrigin callOrigin, final UserType userType, @Nullable final UUID userToken,
+                                                          @Nullable final String reasonCode, @Nullable final String comment) {
         final Long nonNulTenantRecordId = MoreObjects.firstNonNull(tenantRecordId, INTERNAL_TENANT_RECORD_ID);
 
         final DateTimeZone fixedOffsetTimeZone;
@@ -300,7 +291,7 @@ public class InternalCallContextFactory {
             referenceTime = immutableAccountData.getReferenceTime();
         }
 
-        populateMDCContext(userToken, accountRecordId, nonNulTenantRecordId);
+        populateMDCContext(accountRecordId, nonNulTenantRecordId);
 
         return new InternalCallContext(nonNulTenantRecordId,
                                        accountRecordId,
@@ -312,8 +303,8 @@ public class InternalCallContextFactory {
                                        userType,
                                        reasonCode,
                                        comment,
-                                       createdDate != null ? createdDate : clock.getUTCNow(),
-                                       updatedDate != null ? createdDate : clock.getUTCNow());
+                                       clock.getUTCNow(),
+                                       clock.getUTCNow());
     }
 
     private ImmutableAccountData getImmutableAccountData(final Long accountRecordId, final Long tenantRecordId) {
@@ -328,12 +319,11 @@ public class InternalCallContextFactory {
         }
     }
 
-    private void populateMDCContext(@Nullable final UUID userToken, @Nullable final Long accountRecordId, final Long tenantRecordId) {
+    private void populateMDCContext(@Nullable final Long accountRecordId, final Long tenantRecordId) {
         if (accountRecordId != null) {
             MDC.put(MDC_KB_ACCOUNT_RECORD_ID, String.valueOf(accountRecordId));
         }
         MDC.put(MDC_KB_TENANT_RECORD_ID, String.valueOf(tenantRecordId));
-        MDC.put(MDC_KB_USER_TOKEN, userToken != null ? userToken.toString() : null);
     }
 
     //
@@ -396,10 +386,6 @@ public class InternalCallContextFactory {
 
     private UUID getTenantIdSafe(final InternalTenantContext context) {
         return nonEntityDao.retrieveIdFromObject(context.getTenantRecordId(), ObjectType.TENANT, objectIdCacheController);
-    }
-
-    private UUID getAccountIdSafe(final InternalTenantContext context) {
-        return context.getAccountRecordId() != null ? nonEntityDao.retrieveIdFromObject(context.getAccountRecordId(), ObjectType.ACCOUNT, objectIdCacheController) : null;
     }
 
     //

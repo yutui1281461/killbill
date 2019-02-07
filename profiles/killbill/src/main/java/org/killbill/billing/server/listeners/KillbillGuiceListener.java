@@ -34,7 +34,6 @@ import org.killbill.billing.server.filters.ResponseCorsFilter;
 import org.killbill.billing.server.modules.KillbillServerModule;
 import org.killbill.billing.server.notifications.PushNotificationListener;
 import org.killbill.billing.server.security.TenantFilter;
-import org.killbill.billing.util.nodes.KillbillVersions;
 import org.killbill.bus.api.PersistentBus;
 import org.killbill.commons.skeleton.modules.BaseServerModuleBuilder;
 import org.slf4j.Logger;
@@ -62,8 +61,7 @@ public class KillbillGuiceListener extends KillbillPlatformGuiceListener {
         // things like static resources, favicon, etc. are 404'ed)
         final BaseServerModuleBuilder builder = new BaseServerModuleBuilder().setJaxrsUriPattern("/" + SWAGGER_PATH + "|((/" + SWAGGER_PATH + "|" + JaxRsResourceBase.PREFIX + "|" + JaxRsResourceBase.PLUGINS_PATH + ")" + "/.*)")
                                                                              .addJaxrsResource("org.killbill.billing.jaxrs.mappers")
-                                                                             // Dont' provide resources and instead add them automatically to control which one should be seen (e.g TestResource ony in testMode)
-                                                                             //.addJaxrsResource("org.killbill.billing.jaxrs.resources")
+                                                                             .addJaxrsResource("org.killbill.billing.jaxrs.resources")
                                                                              // Swagger integration
                                                                              .addJaxrsResource("io.swagger.jaxrs.listing");
 
@@ -150,7 +148,6 @@ public class KillbillGuiceListener extends KillbillPlatformGuiceListener {
         beanConfig.setContact("killbilling-users@googlegroups.com");
         beanConfig.setLicense("Apache License, Version 2.0");
         beanConfig.setLicenseUrl("http://www.apache.org/licenses/LICENSE-2.0.html");
-        beanConfig.setVersion(KillbillVersions.getKillbillVersion());
         beanConfig.setScan(true);
     }
 

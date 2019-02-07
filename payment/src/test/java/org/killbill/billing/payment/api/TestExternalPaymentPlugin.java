@@ -37,12 +37,13 @@ public class TestExternalPaymentPlugin extends PaymentTestSuiteWithEmbeddedDB {
 
     private Account account;
 
+    @BeforeClass(groups = "slow")
+    protected void beforeClass() throws Exception {
+        super.beforeClass();
+    }
+
     @BeforeMethod(groups = "slow")
     public void beforeMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         super.beforeMethod();
         account = testHelper.createTestAccount("bob@gmail.com", false);
         account = addTestExternalPaymentMethod(account, new DefaultNoOpPaymentMethodPlugin(UUID.randomUUID().toString(), true, null));
@@ -56,7 +57,7 @@ public class TestExternalPaymentPlugin extends PaymentTestSuiteWithEmbeddedDB {
         final String paymentExternalKey = "externalKey";
         final String transactionExternalKey = "transactionKey";
 
-        final Payment payment = paymentApi.createPurchase(account, account.getPaymentMethodId(), null, requestedAmount, Currency.AED, null, paymentExternalKey, transactionExternalKey,
+        final Payment payment = paymentApi.createPurchase(account, account.getPaymentMethodId(), null, requestedAmount, Currency.AED, paymentExternalKey, transactionExternalKey,
                                                           ImmutableList.<PluginProperty>of(), callContext);
 
         final Payment paymentPluginInfoFalse = paymentApi.getPayment(payment.getId(), false, false, ImmutableList.<PluginProperty>of(), callContext);
@@ -96,7 +97,7 @@ public class TestExternalPaymentPlugin extends PaymentTestSuiteWithEmbeddedDB {
         final String transactionExternalKey = "transactionKey";
 
         final Payment payment = paymentApi.createPurchase(account, account.getPaymentMethodId(), null, requestedAmount,
-                                                          Currency.AED, null, paymentExternalKey, transactionExternalKey,
+                                                          Currency.AED, paymentExternalKey, transactionExternalKey,
                                                           ImmutableList.<PluginProperty>of(), callContext);
 
         final Pagination<PaymentMethod> paymentMethods = paymentApi.getPaymentMethods(0L, 10L, false, null, callContext);

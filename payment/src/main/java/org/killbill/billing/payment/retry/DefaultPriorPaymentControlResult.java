@@ -30,25 +30,22 @@ public class DefaultPriorPaymentControlResult implements PriorPaymentControlResu
     private final BigDecimal adjustedRetryAmount;
     private final Currency adjustedCurrency;
     private final UUID adjustedPaymentMethodId;
-    private final String adjustedPaymentPluginName;
     private final Iterable<PluginProperty> adjustedPluginProperties;
 
     public DefaultPriorPaymentControlResult(final boolean isAborted,
                                             final BigDecimal adjustedRetryAmount,
                                             final Currency adjustedCurrency,
                                             final UUID adjustedPaymentMethodId,
-                                            final String adjustedPaymentPluginName,
                                             final Iterable<PluginProperty> adjustedPluginProperties) {
         this.isAborted = isAborted;
         this.adjustedRetryAmount = adjustedRetryAmount;
         this.adjustedCurrency = adjustedCurrency;
         this.adjustedPaymentMethodId = adjustedPaymentMethodId;
         this.adjustedPluginProperties = adjustedPluginProperties;
-        this.adjustedPaymentPluginName = adjustedPaymentPluginName;
     }
 
     public DefaultPriorPaymentControlResult(final boolean isAborted, final BigDecimal adjustedRetryAmount) {
-        this(isAborted, adjustedRetryAmount, null, null, null, null);
+        this(isAborted, adjustedRetryAmount, null, null, null);
     }
 
     public DefaultPriorPaymentControlResult(final boolean isAborted) {
@@ -56,8 +53,8 @@ public class DefaultPriorPaymentControlResult implements PriorPaymentControlResu
     }
 
 
-    public DefaultPriorPaymentControlResult(final boolean isAborted, final UUID adjustedPaymentMethodId, final String adjustedPaymentPluginName, final BigDecimal adjustedAmount, final Currency adjustedCurrency, final Iterable<PluginProperty> adjustedPluginProperties) {
-        this(isAborted, adjustedAmount, adjustedCurrency, adjustedPaymentMethodId, adjustedPaymentPluginName, adjustedPluginProperties);
+    public DefaultPriorPaymentControlResult(final boolean isAborted, final UUID adjustedPaymentMethodId, final BigDecimal adjustedAmount, final Currency adjustedCurrency, final Iterable<PluginProperty> adjustedPluginProperties) {
+        this(isAborted, adjustedAmount, adjustedCurrency, adjustedPaymentMethodId, adjustedPluginProperties);
     }
 
     @Override
@@ -78,11 +75,6 @@ public class DefaultPriorPaymentControlResult implements PriorPaymentControlResu
     @Override
     public UUID getAdjustedPaymentMethodId() {
         return adjustedPaymentMethodId;
-    }
-
-    @Override
-    public String getAdjustedPluginName() {
-        return adjustedPaymentPluginName;
     }
 
     @Override

@@ -18,51 +18,42 @@
 package org.killbill.billing.jaxrs.json;
 
 import java.util.List;
-import java.util.UUID;
 
 import javax.annotation.Nullable;
 
 import org.joda.time.LocalDate;
-import org.killbill.billing.catalog.api.BillingActionPolicy;
-import org.killbill.billing.catalog.api.BillingPeriod;
-import org.killbill.billing.catalog.api.PhaseType;
-import org.killbill.billing.catalog.api.ProductCategory;
-import org.killbill.billing.entitlement.api.SubscriptionEventType;
-import org.killbill.billing.invoice.api.DryRunType;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.swagger.annotations.ApiModel;
 
-@ApiModel(value="InvoiceDryRun")
 public class InvoiceDryRunJson {
 
-    private final DryRunType dryRunType;
-    private final SubscriptionEventType dryRunAction;
-    private final PhaseType phaseType;
+    private final String dryRunType;
+    private final String dryRunAction;
+    private final String phaseType;
     private final String productName;
-    private final ProductCategory productCategory;
-    private final BillingPeriod billingPeriod;
+    private final String productCategory;
+    private final String billingPeriod;
     private final String priceListName;
     private final LocalDate effectiveDate;
-    private final UUID subscriptionId;
-    private final UUID bundleId;
-    private final BillingActionPolicy billingPolicy;
-    private final List<PhasePriceJson> priceOverrides;
+    private final String subscriptionId;
+    private final String bundleId;
+    private final String billingPolicy;
+    private final List<PhasePriceOverrideJson> priceOverrides;
 
     @JsonCreator
-    public InvoiceDryRunJson(@JsonProperty("dryRunType") @Nullable final DryRunType dryRunType,
-                             @JsonProperty("dryRunAction") @Nullable final SubscriptionEventType dryRunAction,
-                             @JsonProperty("phaseType") @Nullable final PhaseType phaseType,
+    public InvoiceDryRunJson(@JsonProperty("dryRunType") @Nullable final String dryRunType,
+                             @JsonProperty("dryRunAction") @Nullable final String dryRunAction,
+                             @JsonProperty("phaseType") @Nullable final String phaseType,
                              @JsonProperty("productName") @Nullable final String productName,
-                             @JsonProperty("productCategory") @Nullable final ProductCategory productCategory,
-                             @JsonProperty("billingPeriod") @Nullable final BillingPeriod billingPeriod,
+                             @JsonProperty("productCategory") @Nullable final String productCategory,
+                             @JsonProperty("billingPeriod") @Nullable final String billingPeriod,
                              @JsonProperty("priceListName") @Nullable final String priceListName,
-                             @JsonProperty("subscriptionId") @Nullable final UUID subscriptionId,
-                             @JsonProperty("bundleId") @Nullable final UUID bundleId,
+                             @JsonProperty("subscriptionId") @Nullable final String subscriptionId,
+                             @JsonProperty("bundleId") @Nullable final String bundleId,
                              @JsonProperty("effectiveDate") @Nullable final LocalDate effectiveDate,
-                             @JsonProperty("billingPolicy") @Nullable final BillingActionPolicy billingPolicy,
-                             @JsonProperty("priceOverrides") @Nullable final List<PhasePriceJson> priceOverrides) {
+                             @JsonProperty("billingPolicy") @Nullable final String billingPolicy,
+                             @JsonProperty("priceOverrides") @Nullable final List<PhasePriceOverrideJson> priceOverrides) {
         this.dryRunType = dryRunType;
         this.dryRunAction = dryRunAction;
         this.phaseType = phaseType;
@@ -77,15 +68,15 @@ public class InvoiceDryRunJson {
         this.priceOverrides = priceOverrides;
     }
 
-    public DryRunType getDryRunType() {
+    public String getDryRunType() {
         return dryRunType;
     }
 
-    public SubscriptionEventType getDryRunAction() {
+    public String getDryRunAction() {
         return dryRunAction;
     }
 
-    public PhaseType getPhaseType() {
+    public String getPhaseType() {
         return phaseType;
     }
 
@@ -93,11 +84,11 @@ public class InvoiceDryRunJson {
         return productName;
     }
 
-    public ProductCategory getProductCategory() {
+    public String getProductCategory() {
         return productCategory;
     }
 
-    public BillingPeriod getBillingPeriod() {
+    public String getBillingPeriod() {
         return billingPeriod;
     }
 
@@ -105,7 +96,7 @@ public class InvoiceDryRunJson {
         return priceListName;
     }
 
-    public UUID getSubscriptionId() {
+    public String getSubscriptionId() {
         return subscriptionId;
     }
 
@@ -113,15 +104,15 @@ public class InvoiceDryRunJson {
         return effectiveDate;
     }
 
-    public UUID getBundleId() {
+    public String getBundleId() {
         return bundleId;
     }
 
-    public BillingActionPolicy getBillingPolicy() {
+    public String getBillingPolicy() {
         return billingPolicy;
     }
 
-    public List<PhasePriceJson> getPriceOverrides() {
+    public List<PhasePriceOverrideJson> getPriceOverrides() {
         return priceOverrides;
     }
 

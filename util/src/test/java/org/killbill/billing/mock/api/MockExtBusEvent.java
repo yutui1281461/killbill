@@ -78,11 +78,6 @@ public class MockExtBusEvent implements ExtBusEvent {
     }
 
     @Override
-    public UUID getUserToken() {
-        return null;
-    }
-
-    @Override
     public String toString() {
         return "MockExtBusEvent [eventType=" + eventType + ", objectType="
                + objectType + ", objectId=" + objectId + ", accountId="

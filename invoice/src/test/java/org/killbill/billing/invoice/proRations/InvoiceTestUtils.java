@@ -23,13 +23,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import org.joda.time.DateTime;
-import org.joda.time.LocalDate;
 import org.killbill.billing.account.api.Account;
 import org.killbill.billing.account.api.AccountApiException;
 import org.killbill.billing.callcontext.InternalCallContext;
 import org.killbill.billing.catalog.api.Currency;
 import org.killbill.billing.entity.EntityPersistenceException;
+import org.killbill.billing.invoice.InvoiceDispatcher.FutureAccountNotifications;
+import org.killbill.billing.invoice.InvoiceDispatcher.FutureAccountNotifications.SubscriptionNotification;
 import org.killbill.billing.invoice.TestInvoiceHelper;
 import org.killbill.billing.invoice.api.Invoice;
 import org.killbill.billing.invoice.api.InvoiceApiException;
@@ -47,7 +47,7 @@ import org.mockito.Mockito;
 import org.testng.Assert;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableMap;
 
 public class InvoiceTestUtils {
 
@@ -82,7 +82,7 @@ public class InvoiceTestUtils {
         final UUID invoiceId = UUID.randomUUID();
         final UUID accountId;
         try {
-            final Account account = testInvoiceHelper.createAccount(internalCallContext.toCallContext(null,null));
+            final Account account = testInvoiceHelper.createAccount(internalCallContext.toCallContext(null));
             accountId = account.getId();
         } catch (final AccountApiException e) {
             Assert.fail(e.getMessage());
@@ -91,9 +91,8 @@ public class InvoiceTestUtils {
 
         Mockito.when(invoice.getId()).thenReturn(invoiceId);
         Mockito.when(invoice.getAccountId()).thenReturn(accountId);
-        final LocalDate today = clock.getUTCToday();
-        Mockito.when(invoice.getInvoiceDate()).thenReturn(today);
-        Mockito.when(invoice.getTargetDate()).thenReturn(today);
+        Mockito.when(invoice.getInvoiceDate()).thenReturn(clock.getUTCToday());
+        Mockito.when(invoice.getTargetDate()).thenReturn(clock.getUTCToday());
         Mockito.when(invoice.getCurrency()).thenReturn(currency);
         Mockito.when(invoice.isMigrationInvoice()).thenReturn(false);
         Mockito.when(invoice.getStatus()).thenReturn(InvoiceStatus.COMMITTED);
@@ -109,14 +108,14 @@ public class InvoiceTestUtils {
 
         final InvoiceModelDao invoiceModelDao = new InvoiceModelDao(invoice);
         invoiceModelDao.addInvoiceItems(invoiceModelItems);
-        invoiceDao.createInvoices(ImmutableList.<InvoiceModelDao>of(invoiceModelDao), ImmutableSet.of(), internalCallContext);
+        invoiceDao.createInvoices(ImmutableList.<InvoiceModelDao>of(invoiceModelDao), internalCallContext);
 
         return invoice;
     }
 
     public static InvoiceItem createInvoiceItem(final Clock clock, final UUID invoiceId, final UUID accountId, final BigDecimal amount, final Currency currency) {
         return new FixedPriceInvoiceItem(invoiceId, accountId, UUID.randomUUID(), UUID.randomUUID(),
-                                         null, "charge back test", "charge back phase", clock.getUTCToday(), amount, currency);
+                                         "charge back test", "charge back phase", clock.getUTCToday(), amount, currency);
     }
 
     public static InvoicePayment createAndPersistPayment(final InvoiceInternalApi invoicePaymentApi,
@@ -131,8 +130,7 @@ public class InvoiceTestUtils {
         Mockito.when(payment.getInvoiceId()).thenReturn(invoiceId);
         Mockito.when(payment.getPaymentId()).thenReturn(UUID.randomUUID());
         Mockito.when(payment.getPaymentCookieId()).thenReturn(UUID.randomUUID().toString());
-        final DateTime utcNow = clock.getUTCNow();
-        Mockito.when(payment.getPaymentDate()).thenReturn(utcNow);
+        Mockito.when(payment.getPaymentDate()).thenReturn(clock.getUTCNow());
         Mockito.when(payment.getAmount()).thenReturn(amount);
         Mockito.when(payment.getCurrency()).thenReturn(currency);
         Mockito.when(payment.getProcessedCurrency()).thenReturn(currency);

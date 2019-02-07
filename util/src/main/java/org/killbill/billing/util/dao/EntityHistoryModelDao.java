@@ -31,18 +31,16 @@ public class EntityHistoryModelDao<M extends EntityModelDao<E>, E extends Entity
     private Long targetRecordId;
     private M entity;
     private ChangeType changeType;
-    private Long historyRecordId;
 
-    public EntityHistoryModelDao(final UUID id, final M src, final Long targetRecordId, final ChangeType type, final Long historyRecordId, final DateTime createdDate) {
+    public EntityHistoryModelDao(final UUID id, final M src, final Long targetRecordId, final ChangeType type, final DateTime createdDate) {
         super(id, createdDate, createdDate);
         this.changeType = type;
         this.targetRecordId = targetRecordId;
         this.entity = src;
-        this.historyRecordId = historyRecordId;
     }
 
-    public EntityHistoryModelDao(final M src, final Long targetRecordId, final ChangeType type, final Long historyRecordId, final DateTime createdDate) {
-        this(UUIDs.randomUUID(), src, targetRecordId, type, historyRecordId, createdDate);
+    public EntityHistoryModelDao(final M src, final Long targetRecordId, final ChangeType type, final DateTime createdDate) {
+        this(UUIDs.randomUUID(), src, targetRecordId, type, createdDate);
     }
 
     public ChangeType getChangeType() {
@@ -67,13 +65,5 @@ public class EntityHistoryModelDao<M extends EntityModelDao<E>, E extends Entity
 
     public void setChangeType(final ChangeType changeType) {
         this.changeType = changeType;
-    }
-
-    public Long getHistoryRecordId() {
-        return historyRecordId;
-    }
-
-    public void setHistoryRecordId(final Long historyRecordId) {
-        this.historyRecordId = historyRecordId;
     }
 }

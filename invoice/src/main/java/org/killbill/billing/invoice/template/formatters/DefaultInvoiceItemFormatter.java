@@ -138,23 +138,8 @@ public class DefaultInvoiceItemFormatter implements InvoiceItemFormatter {
     }
 
     @Override
-    public String getProductName() {
-        return Strings.nullToEmpty(translator.getTranslation(item.getProductName()));
-    }
-
-    @Override
-    public String getPrettyProductName() {
-        return Strings.nullToEmpty(translator.getTranslation(item.getPrettyProductName()));
-    }
-
-    @Override
     public String getPlanName() {
         return Strings.nullToEmpty(translator.getTranslation(item.getPlanName()));
-    }
-
-    @Override
-    public String getPrettyPlanName() {
-        return Strings.nullToEmpty(translator.getTranslation(item.getPrettyPlanName()));
     }
 
     @Override
@@ -163,18 +148,8 @@ public class DefaultInvoiceItemFormatter implements InvoiceItemFormatter {
     }
 
     @Override
-    public String getPrettyPhaseName() {
-        return Strings.nullToEmpty(translator.getTranslation(item.getPrettyPhaseName()));
-    }
-
-    @Override
     public String getUsageName() {
         return Strings.nullToEmpty(translator.getTranslation(item.getUsageName()));
-    }
-
-    @Override
-    public String getPrettyUsageName() {
-        return Strings.nullToEmpty(translator.getTranslation(item.getPrettyUsageName()));
     }
 
     @Override
@@ -201,12 +176,6 @@ public class DefaultInvoiceItemFormatter implements InvoiceItemFormatter {
     public UUID getLinkedItemId() {
         return null;
     }
-
-    @Override
-    public Integer getQuantity() { return item.getQuantity(); }
-
-    @Override
-    public String getItemDetails() { return item.getItemDetails(); }
 
     @Override
     public boolean matches(final Object other) {

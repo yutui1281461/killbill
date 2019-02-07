@@ -27,22 +27,26 @@ import javax.annotation.Nullable;
 import org.joda.time.DateTime;
 import org.joda.time.LocalDate;
 import org.killbill.billing.client.KillBillClientException;
-import org.killbill.billing.client.model.gen.Account;
-import org.killbill.billing.client.model.gen.AccountTimeline;
-import org.killbill.billing.client.model.gen.AuditLog;
-import org.killbill.billing.client.model.gen.Credit;
-import org.killbill.billing.client.model.gen.EventSubscription;
-import org.killbill.billing.client.model.gen.Invoice;
-import org.killbill.billing.client.model.gen.InvoicePayment;
-import org.killbill.billing.client.model.gen.InvoicePaymentTransaction;
-import org.killbill.billing.client.model.gen.Payment;
-import org.killbill.billing.client.model.gen.PaymentTransaction;
-import org.killbill.billing.entitlement.api.SubscriptionEventType;
+import org.killbill.billing.client.RequestOptions;
+import org.killbill.billing.client.model.Account;
+import org.killbill.billing.client.model.AccountTimeline;
+import org.killbill.billing.client.model.AuditLog;
+import org.killbill.billing.client.model.Credit;
+import org.killbill.billing.client.model.EventSubscription;
+import org.killbill.billing.client.model.Invoice;
+import org.killbill.billing.client.model.InvoicePayment;
+import org.killbill.billing.client.model.InvoicePaymentTransaction;
+import org.killbill.billing.client.model.Payment;
+import org.killbill.billing.client.model.PaymentTransaction;
 import org.killbill.billing.payment.api.TransactionType;
 import org.killbill.billing.util.api.AuditLevel;
 import org.killbill.billing.util.audit.ChangeType;
 import org.testng.Assert;
 import org.testng.annotations.Test;
+
+import com.google.common.collect.HashMultimap;
+
+import static org.killbill.billing.jaxrs.resources.JaxrsResource.QUERY_PARALLEL;
 
 public class TestAccountTimeline extends TestJaxrsBase {
 
@@ -65,11 +69,11 @@ public class TestAccountTimeline extends TestJaxrsBase {
 
         final List<EventSubscription> events = timeline.getBundles().get(0).getSubscriptions().get(0).getEvents();
         Assert.assertEquals(events.get(0).getEffectiveDate(), new LocalDate(2012, 4, 25));
-        Assert.assertEquals(events.get(0).getEventType(), SubscriptionEventType.START_ENTITLEMENT);
+        Assert.assertEquals(events.get(0).getEventType(), "START_ENTITLEMENT");
         Assert.assertEquals(events.get(1).getEffectiveDate(), new LocalDate(2012, 4, 25));
-        Assert.assertEquals(events.get(1).getEventType(), SubscriptionEventType.START_BILLING);
+        Assert.assertEquals(events.get(1).getEventType(), "START_BILLING");
         Assert.assertEquals(events.get(2).getEffectiveDate(), new LocalDate(2012, 5, 25));
-        Assert.assertEquals(events.get(2).getEventType(), SubscriptionEventType.PHASE);
+        Assert.assertEquals(events.get(2).getEventType(), "PHASE");
     }
 
     @Test(groups = "slow", description = "Can retrieve the timeline with audits")
@@ -79,27 +83,27 @@ public class TestAccountTimeline extends TestJaxrsBase {
         final DateTime endTime = clock.getUTCNow();
 
         // Add credit
-        final Invoice invoice = accountApi.getInvoicesForAccount(accountJson.getAccountId(), null, requestOptions).get(1);
+        final Invoice invoice = killBillClient.getInvoicesForAccount(accountJson.getAccountId()).get(1);
         final BigDecimal creditAmount = BigDecimal.ONE;
         final Credit credit = new Credit();
         credit.setAccountId(accountJson.getAccountId());
         credit.setCreditAmount(creditAmount);
-        creditApi.createCredit(credit, true, NULL_PLUGIN_PROPERTIES, requestOptions);
+        killBillClient.createCredit(credit, true, createdBy, reason, comment);
 
         // Add refund
-        final Payment postedPayment = accountApi.getPaymentsForAccount(accountJson.getAccountId(), NULL_PLUGIN_PROPERTIES, requestOptions).get(0);
+        final Payment postedPayment = killBillClient.getPaymentsForAccount(accountJson.getAccountId()).get(0);
         final BigDecimal refundAmount = BigDecimal.ONE;
         final InvoicePaymentTransaction refund = new InvoicePaymentTransaction();
         refund.setPaymentId(postedPayment.getPaymentId());
         refund.setAmount(refundAmount);
-        invoicePaymentApi.createRefundWithAdjustments(postedPayment.getPaymentId(), refund, accountJson.getPaymentMethodId(), NULL_PLUGIN_PROPERTIES, requestOptions);
+        killBillClient.createInvoicePaymentRefund(refund, createdBy, reason, comment);
 
         // Add chargeback
         final BigDecimal chargebackAmount = BigDecimal.ONE;
         final InvoicePaymentTransaction chargeback = new InvoicePaymentTransaction();
         chargeback.setPaymentId(postedPayment.getPaymentId());
         chargeback.setAmount(chargebackAmount);
-        invoicePaymentApi.createChargeback(postedPayment.getPaymentId(), chargeback, requestOptions);
+        killBillClient.createInvoicePaymentChargeback(chargeback, createdBy, reason, comment);
 
         // Verify payments
         verifyPayments(accountJson.getAccountId(), startTime, endTime, refundAmount, chargebackAmount);
@@ -123,18 +127,18 @@ public class TestAccountTimeline extends TestJaxrsBase {
             final InvoicePayment payment = timeline.getPayments().get(0);
 
             // Verify payments
-            final List<PaymentTransaction> purchaseTransactions = getInvoicePaymentTransactions(timeline.getPayments(), TransactionType.PURCHASE);
+            final List<PaymentTransaction> purchaseTransactions = getPaymentTransactions(timeline.getPayments(), TransactionType.PURCHASE.toString());
             Assert.assertEquals(purchaseTransactions.size(), 1);
             final PaymentTransaction purchaseTransaction = purchaseTransactions.get(0);
 
             // Verify refunds
-            final List<PaymentTransaction> refundTransactions = getInvoicePaymentTransactions(timeline.getPayments(), TransactionType.REFUND);
+            final List<PaymentTransaction> refundTransactions = getPaymentTransactions(timeline.getPayments(), TransactionType.REFUND.toString());
             Assert.assertEquals(refundTransactions.size(), 1);
             final PaymentTransaction refundTransaction = refundTransactions.get(0);
             Assert.assertEquals(refundTransaction.getPaymentId(), payment.getPaymentId());
             Assert.assertEquals(refundTransaction.getAmount().compareTo(refundAmount), 0);
 
-            final List<PaymentTransaction> chargebackTransactions = getInvoicePaymentTransactions(timeline.getPayments(), TransactionType.CHARGEBACK);
+            final List<PaymentTransaction> chargebackTransactions = getPaymentTransactions(timeline.getPayments(), TransactionType.CHARGEBACK.toString());
             Assert.assertEquals(chargebackTransactions.size(), 1);
             final PaymentTransaction chargebackTransaction = chargebackTransactions.get(0);
             Assert.assertEquals(chargebackTransaction.getPaymentId(), payment.getPaymentId());
@@ -304,10 +308,13 @@ public class TestAccountTimeline extends TestJaxrsBase {
     }
 
     private AccountTimeline getAccountTimeline(final UUID accountId, final AuditLevel auditLevel) throws KillBillClientException {
-        final AccountTimeline accountTimeline = accountApi.getAccountTimeline(accountId, false, auditLevel, requestOptions);
+        final AccountTimeline accountTimeline = killBillClient.getAccountTimeline(accountId, auditLevel, RequestOptions.empty());
 
         // Verify also the parallel path
-        final AccountTimeline accountTimelineInParallel = accountApi.getAccountTimeline(accountId, true, auditLevel, requestOptions);
+        final HashMultimap<String, String> queryParams = HashMultimap.<String, String>create();
+        queryParams.put(QUERY_PARALLEL, "true");
+        final RequestOptions requestOptions = RequestOptions.builder().withQueryParams(queryParams).build();
+        final AccountTimeline accountTimelineInParallel = killBillClient.getAccountTimeline(accountId, auditLevel, requestOptions);
         Assert.assertEquals(accountTimelineInParallel, accountTimeline);
 
         return accountTimeline;

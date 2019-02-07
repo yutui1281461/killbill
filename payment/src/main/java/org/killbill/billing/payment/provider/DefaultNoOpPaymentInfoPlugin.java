@@ -41,28 +41,9 @@ public class DefaultNoOpPaymentInfoPlugin implements PaymentTransactionInfoPlugi
     private final String gatewayErrorCode;
     private final Currency currency;
     private final TransactionType transactionType;
-    private final String firstPaymentReferenceId;
-    private final String secondPaymentReferenceId;
-    private final List<PluginProperty> pluginProperties;
 
     public DefaultNoOpPaymentInfoPlugin(final UUID kbPaymentId, final UUID kbTransactionPaymentId, final TransactionType transactionType, final BigDecimal amount, final Currency currency, final DateTime effectiveDate,
                                         final DateTime createdDate, final PaymentPluginStatus status, final String gatewayErrorCode, final String gatewayError) {
-        this(kbPaymentId, kbTransactionPaymentId, transactionType, amount, currency, effectiveDate, createdDate, status, gatewayErrorCode, gatewayError, null, null, ImmutableList.<PluginProperty>of());
-    }
-
-    public DefaultNoOpPaymentInfoPlugin(final UUID kbPaymentId,
-                                        final UUID kbTransactionPaymentId,
-                                        final TransactionType transactionType,
-                                        final BigDecimal amount,
-                                        final Currency currency,
-                                        final DateTime effectiveDate,
-                                        final DateTime createdDate,
-                                        final PaymentPluginStatus status,
-                                        final String gatewayErrorCode,
-                                        final String gatewayError,
-                                        final String firstPaymentReferenceId,
-                                        final String secondPaymentReferenceId,
-                                        final List<PluginProperty> pluginProperties) {
         this.kbPaymentId = kbPaymentId;
         this.kbTransactionPaymentId = kbTransactionPaymentId;
         this.transactionType = transactionType;
@@ -73,9 +54,6 @@ public class DefaultNoOpPaymentInfoPlugin implements PaymentTransactionInfoPlugi
         this.gatewayErrorCode = gatewayErrorCode;
         this.gatewayError = gatewayError;
         this.currency = currency;
-        this.firstPaymentReferenceId = firstPaymentReferenceId;
-        this.secondPaymentReferenceId = secondPaymentReferenceId;
-        this.pluginProperties = pluginProperties;
     }
 
     @Override
@@ -130,35 +108,29 @@ public class DefaultNoOpPaymentInfoPlugin implements PaymentTransactionInfoPlugi
 
     @Override
     public String getFirstPaymentReferenceId() {
-        return firstPaymentReferenceId;
+        return null;
     }
 
     @Override
     public String getSecondPaymentReferenceId() {
-        return secondPaymentReferenceId;
+        return null;
     }
 
     @Override
     public List<PluginProperty> getProperties() {
-        return pluginProperties;
+        return ImmutableList.<PluginProperty>of();
     }
 
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("DefaultNoOpPaymentInfoPlugin{");
         sb.append("kbPaymentId=").append(kbPaymentId);
-        sb.append(", kbTransactionPaymentId=").append(kbTransactionPaymentId);
         sb.append(", amount=").append(amount);
         sb.append(", effectiveDate=").append(effectiveDate);
         sb.append(", createdDate=").append(createdDate);
         sb.append(", status=").append(status);
-        sb.append(", gatewayError='").append(gatewayError).append('\'');
-        sb.append(", gatewayErrorCode='").append(gatewayErrorCode).append('\'');
+        sb.append(", error='").append(gatewayError).append('\'');
         sb.append(", currency=").append(currency);
-        sb.append(", transactionType=").append(transactionType);
-        sb.append(", firstPaymentReferenceId='").append(firstPaymentReferenceId).append('\'');
-        sb.append(", secondPaymentReferenceId='").append(secondPaymentReferenceId).append('\'');
-        sb.append(", pluginProperties=").append(pluginProperties);
         sb.append('}');
         return sb.toString();
     }
@@ -204,15 +176,6 @@ public class DefaultNoOpPaymentInfoPlugin implements PaymentTransactionInfoPlugi
         if (status != that.status) {
             return false;
         }
-        if (firstPaymentReferenceId != null ? !firstPaymentReferenceId.equals(that.firstPaymentReferenceId) : that.firstPaymentReferenceId != null) {
-            return false;
-        }
-        if (secondPaymentReferenceId != null ? !secondPaymentReferenceId.equals(that.secondPaymentReferenceId) : that.secondPaymentReferenceId != null) {
-            return false;
-        }
-        if (pluginProperties != null ? !pluginProperties.equals(that.pluginProperties) : that.pluginProperties != null) {
-            return false;
-        }
 
         return true;
     }
@@ -229,9 +192,6 @@ public class DefaultNoOpPaymentInfoPlugin implements PaymentTransactionInfoPlugi
         result = 31 * result + (gatewayError != null ? gatewayError.hashCode() : 0);
         result = 31 * result + (gatewayErrorCode != null ? gatewayErrorCode.hashCode() : 0);
         result = 31 * result + (currency != null ? currency.hashCode() : 0);
-        result = 31 * result + (firstPaymentReferenceId != null ? firstPaymentReferenceId.hashCode() : 0);
-        result = 31 * result + (secondPaymentReferenceId != null ? secondPaymentReferenceId.hashCode() : 0);
-        result = 31 * result + (pluginProperties != null ? pluginProperties.hashCode() : 0);
         return result;
     }
 }

@@ -24,17 +24,10 @@ import org.killbill.billing.util.callcontext.TenantContext;
 
 public class DefaultTenantContext implements TenantContext {
 
-    private final UUID accountId;
     private final UUID tenantId;
 
-    public DefaultTenantContext(@Nullable final UUID accountId, @Nullable final UUID tenantId) {
-        this.accountId = accountId;
+    public DefaultTenantContext(@Nullable final UUID tenantId) {
         this.tenantId = tenantId;
-    }
-
-    @Override
-    public UUID getAccountId() {
-        return accountId;
     }
 
     @Override
@@ -46,7 +39,6 @@ public class DefaultTenantContext implements TenantContext {
     public String toString() {
         final StringBuilder sb = new StringBuilder();
         sb.append("DefaultTenantContext");
-        sb.append("{accountId=").append(accountId);
         sb.append("{tenantId=").append(tenantId);
         sb.append('}');
         return sb.toString();
@@ -63,9 +55,6 @@ public class DefaultTenantContext implements TenantContext {
 
         final DefaultTenantContext that = (DefaultTenantContext) o;
 
-        if (accountId != null ? !accountId.equals(that.accountId) : that.accountId != null) {
-            return false;
-        }
         if (tenantId != null ? !tenantId.equals(that.tenantId) : that.tenantId != null) {
             return false;
         }
@@ -75,8 +64,6 @@ public class DefaultTenantContext implements TenantContext {
 
     @Override
     public int hashCode() {
-        int result = accountId != null ? accountId.hashCode() : 0;
-        result = 31 * result + (tenantId != null ? tenantId.hashCode() : 0);
-        return result;
+        return tenantId != null ? tenantId.hashCode() : 0;
     }
 }

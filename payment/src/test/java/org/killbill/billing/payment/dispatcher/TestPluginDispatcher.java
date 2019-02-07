@@ -43,9 +43,6 @@ public class TestPluginDispatcher extends PaymentTestSuiteNoDB {
 
     @BeforeMethod(groups = "fast")
     public void beforeMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
         super.beforeMethod();
         eventBus.start();
         voidPluginDispatcher = new PluginDispatcher<Void>(10, paymentExecutors);

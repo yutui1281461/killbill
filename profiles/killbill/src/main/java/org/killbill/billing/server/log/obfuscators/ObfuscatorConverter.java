@@ -17,16 +17,14 @@
 
 package org.killbill.billing.server.log.obfuscators;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 
 import ch.qos.logback.classic.pattern.ClassicConverter;
 import ch.qos.logback.classic.spi.ILoggingEvent;
+import com.google.common.collect.ImmutableList;
 
 /**
- * ObfuscatorConverter attempts to mask sensitive data in the log files. Extra parameters can be passed to the
- * converter and the underlying obsfucators by adding arguments behind maskedMsg like the example shown below.
+ * ObfuscatorConverter attempts to mask sensitive data in the log files.
  * <p/>
  * To use, define a new conversion word in your Logback configuration, e.g.:
  * <pre>
@@ -35,7 +33,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
  *             converterClass="org.killbill.billing.server.log.obfuscators.ObfuscatorConverter" />
  *         <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
  *             <encoder>
- *                 <pattern>%date [%thread] - %maskedMsg{param1, param2, ...}%n</pattern>
+ *                 <pattern>%date [%thread] - %maskedMsg%n</pattern>
  *             </encoder>
  *         </appender>
  *         <root level="DEBUG">
@@ -46,16 +44,10 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
  */
 public class ObfuscatorConverter extends ClassicConverter {
 
-    private final Collection<Obfuscator> obfuscators = new ArrayList<Obfuscator>();
-
-    @Override
-    public void start() {
-        obfuscators.addAll(Arrays.asList(new ConfigMagicObfuscator(),
-                                         new LoggingFilterObfuscator(),
-                                         new PatternObfuscator(getOptionList()),
-                                         new LuhnMaskingObfuscator()));
-        super.start();
-    }
+    private final Collection<Obfuscator> obfuscators = ImmutableList.<Obfuscator>of(new ConfigMagicObfuscator(),
+                                                                                    new LoggingFilterObfuscator(),
+                                                                                    new PatternObfuscator(),
+                                                                                    new LuhnMaskingObfuscator());
 
     @Override
     public String convert(final ILoggingEvent event) {

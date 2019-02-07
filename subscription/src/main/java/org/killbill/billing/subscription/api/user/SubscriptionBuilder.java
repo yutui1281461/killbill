@@ -26,7 +26,6 @@ import org.killbill.billing.subscription.exceptions.SubscriptionBaseError;
 
 public class SubscriptionBuilder {
 
-
     private UUID id;
     private UUID bundleId;
     private String bundleExternalKey;
@@ -37,7 +36,6 @@ public class SubscriptionBuilder {
     private ProductCategory category;
     private DateTime chargedThroughDate;
     private boolean migrated;
-    private Integer subscriptionBCD;
 
     public SubscriptionBuilder() {
     }
@@ -102,11 +100,6 @@ public class SubscriptionBuilder {
         return this;
     }
 
-    public SubscriptionBuilder setSubscriptionBCD(final Integer subscriptionBCD) {
-        this.subscriptionBCD = subscriptionBCD;
-        return this;
-    }
-
     public UUID getId() {
         return id;
     }
@@ -146,8 +139,19 @@ public class SubscriptionBuilder {
         return migrated;
     }
 
-    public Integer getSubscriptionBCD() {
-        return subscriptionBCD;
+    private void checkAllFieldsSet() {
+        for (final Field cur : SubscriptionBuilder.class.getDeclaredFields()) {
+            try {
+                final Object value = cur.get(this);
+                if (value == null) {
+                    throw new SubscriptionBaseError(String.format("Field %s has not been set for SubscriptionBase",
+                                                                  cur.getName()));
+                }
+            } catch (IllegalAccessException e) {
+                throw new SubscriptionBaseError(String.format("Failed to access value for field %s for SubscriptionBase",
+                                                              cur.getName()), e);
+            }
+        }
     }
 
 }

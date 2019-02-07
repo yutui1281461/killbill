@@ -30,7 +30,7 @@ public class TestJDBCSessionDao extends UtilTestSuiteWithEmbeddedDB {
 
     @Test(groups = "slow")
     public void testH2AndInvalidSessionId() {
-        final JDBCSessionDao jdbcSessionDao = new JDBCSessionDao(dbi, roDbi);
+        final JDBCSessionDao jdbcSessionDao = new JDBCSessionDao(dbi);
 
         // We need to create some data to force H2 to build the query
         // (otherwise, the read path is optimized and the bug is not triggered)
@@ -44,7 +44,7 @@ public class TestJDBCSessionDao extends UtilTestSuiteWithEmbeddedDB {
     @Test(groups = "slow")
     public void testCRUD() throws Exception {
         // Note! We are testing the do* methods here to bypass the caching layer
-        final JDBCSessionDao jdbcSessionDao = new JDBCSessionDao(dbi, roDbi);
+        final JDBCSessionDao jdbcSessionDao = new JDBCSessionDao(dbi);
 
         // Retrieve
         final SimpleSession session = createSession();

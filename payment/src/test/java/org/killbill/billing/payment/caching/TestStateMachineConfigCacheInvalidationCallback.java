@@ -39,9 +39,6 @@ public class TestStateMachineConfigCacheInvalidationCallback extends PaymentTest
 
     @BeforeMethod(groups = "fast")
     public void beforeMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
         super.beforeMethod();
 
         cacheControllerDispatcher.clearAll();

@@ -20,7 +20,6 @@ package org.killbill.billing.invoice.generator;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
@@ -33,38 +32,15 @@ import org.killbill.billing.invoice.api.Invoice;
 import org.killbill.billing.invoice.api.InvoiceApiException;
 import org.killbill.billing.invoice.api.InvoiceItem;
 import org.killbill.billing.invoice.generator.InvoiceWithMetadata.SubscriptionFutureNotificationDates;
-import org.killbill.billing.invoice.generator.InvoiceWithMetadata.TrackingRecordId;
 import org.killbill.billing.junction.BillingEventSet;
 import org.slf4j.Logger;
 
 public abstract class InvoiceItemGenerator {
 
-
-    public abstract InvoiceGeneratorResult generateItems(final ImmutableAccountData account, final UUID invoiceId, final BillingEventSet eventSet,
-                                                         @Nullable final Iterable<Invoice> existingInvoices, final LocalDate targetDate,
-                                                         final Currency targetCurrency, Map<UUID, SubscriptionFutureNotificationDates> perSubscriptionFutureNotificationDate,
-                                                         final InternalCallContext context) throws InvoiceApiException;
-
-
-    public static class InvoiceGeneratorResult {
-        private final List<InvoiceItem> items;
-        private final Set<TrackingRecordId> trackingIds;
-
-        public InvoiceGeneratorResult(final List<InvoiceItem> items, final Set<TrackingRecordId> trackingIds) {
-            this.items = items;
-            this.trackingIds = trackingIds;
-        }
-
-        public List<InvoiceItem> getItems() {
-            return items;
-        }
-
-        public Set<TrackingRecordId> getTrackingIds() {
-            return trackingIds;
-        }
-    }
-
-
+    public abstract List<InvoiceItem> generateItems(final ImmutableAccountData account, final UUID invoiceId, final BillingEventSet eventSet,
+                                                    @Nullable final List<Invoice> existingInvoices, final LocalDate targetDate,
+                                                    final Currency targetCurrency, Map<UUID, SubscriptionFutureNotificationDates> perSubscriptionFutureNotificationDate,
+                                                    final InternalCallContext context) throws InvoiceApiException;
 
     public static class InvoiceItemGeneratorLogger {
 
@@ -72,7 +48,6 @@ public abstract class InvoiceItemGenerator {
         private final UUID accountId;
         private final String type;
         private final Logger delegate;
-        private final boolean enabled;
 
         private StringBuilder logStringBuilder = null;
 
@@ -81,18 +56,17 @@ public abstract class InvoiceItemGenerator {
             this.accountId = accountId;
             this.type = type;
             this.delegate = delegate;
-            this.enabled = delegate.isDebugEnabled();
         }
 
         public void append(final Object event, final Collection<InvoiceItem> items) {
-            if (!enabled || items.isEmpty()) {
+            if (items.isEmpty()) {
                 return;
             }
             append(event, items.toArray(new InvoiceItem[items.size()]));
         }
 
         public void append(final Object event, final InvoiceItem... items) {
-            if (!enabled || items.length == 0) {
+            if (items.length == 0) {
                 return;
             }
 
@@ -106,8 +80,8 @@ public abstract class InvoiceItemGenerator {
         }
 
         public void logItems() {
-            if (enabled && logStringBuilder != null) {
-                delegate.debug(getLogStringBuilder().toString());
+            if (logStringBuilder != null) {
+                delegate.info(getLogStringBuilder().toString());
             }
         }
 

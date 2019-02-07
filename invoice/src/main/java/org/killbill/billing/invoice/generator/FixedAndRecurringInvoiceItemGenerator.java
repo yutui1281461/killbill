@@ -59,7 +59,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Range;
@@ -83,10 +82,10 @@ public class FixedAndRecurringInvoiceItemGenerator extends InvoiceItemGenerator 
         this.clock = clock;
     }
 
-    public InvoiceGeneratorResult generateItems(final ImmutableAccountData account, final UUID invoiceId, final BillingEventSet eventSet,
-                                                @Nullable final Iterable<Invoice> existingInvoices, final LocalDate targetDate,
-                                                final Currency targetCurrency, final Map<UUID, SubscriptionFutureNotificationDates> perSubscriptionFutureNotificationDate,
-                                                final InternalCallContext internalCallContext) throws InvoiceApiException {
+    public List<InvoiceItem> generateItems(final ImmutableAccountData account, final UUID invoiceId, final BillingEventSet eventSet,
+                                           @Nullable final List<Invoice> existingInvoices, final LocalDate targetDate,
+                                           final Currency targetCurrency, final Map<UUID, SubscriptionFutureNotificationDates> perSubscriptionFutureNotificationDate,
+                                           final InternalCallContext internalCallContext) throws InvoiceApiException {
         final Multimap<UUID, LocalDate> createdItemsPerDayPerSubscription = LinkedListMultimap.<UUID, LocalDate>create();
 
         final AccountItemTree accountItemTree = new AccountItemTree(account.getId(), invoiceId);
@@ -106,7 +105,7 @@ public class FixedAndRecurringInvoiceItemGenerator extends InvoiceItemGenerator 
 
         // Generate list of proposed invoice items based on billing events from junction-- proposed items are ALL items since beginning of time
         final List<InvoiceItem> proposedItems = new ArrayList<InvoiceItem>();
-        processRecurringBillingEvents(invoiceId, account.getId(), eventSet, targetDate, targetCurrency, proposedItems, perSubscriptionFutureNotificationDate, internalCallContext);
+        processRecurringBillingEvents(invoiceId, account.getId(), eventSet, targetDate, targetCurrency, proposedItems, perSubscriptionFutureNotificationDate, existingInvoices, internalCallContext);
         processFixedBillingEvents(invoiceId, account.getId(), eventSet, targetDate, targetCurrency, proposedItems, internalCallContext);
 
         try {
@@ -119,12 +118,13 @@ public class FixedAndRecurringInvoiceItemGenerator extends InvoiceItemGenerator 
         final List<InvoiceItem> resultingItems = accountItemTree.getResultingItemList();
         safetyBounds(resultingItems, createdItemsPerDayPerSubscription, internalCallContext);
 
-        return new InvoiceGeneratorResult(resultingItems, ImmutableSet.of());
+        return resultingItems;
     }
 
     private void processRecurringBillingEvents(final UUID invoiceId, final UUID accountId, final BillingEventSet events,
                                                final LocalDate targetDate, final Currency currency, final List<InvoiceItem> proposedItems,
                                                final Map<UUID, SubscriptionFutureNotificationDates> perSubscriptionFutureNotificationDate,
+                                               @Nullable final List<Invoice> existingInvoices,
                                                final InternalCallContext internalCallContext) throws InvoiceApiException {
         if (events.isEmpty()) {
             return;
@@ -141,11 +141,11 @@ public class FixedAndRecurringInvoiceItemGenerator extends InvoiceItemGenerator 
             if (!events.getSubscriptionIdsWithAutoInvoiceOff().
                     contains(thisEvent.getSubscription().getId())) { // don't consider events for subscriptions that have auto_invoice_off
                 final BillingEvent adjustedNextEvent = (thisEvent.getSubscription().getId() == nextEvent.getSubscription().getId()) ? nextEvent : null;
-                final List<InvoiceItem> newProposedItems = processRecurringEvent(invoiceId, accountId, thisEvent, adjustedNextEvent, targetDate, currency, invoiceItemGeneratorLogger, thisEvent.getPlan().getRecurringBillingMode(), perSubscriptionFutureNotificationDate, internalCallContext);
+                final List<InvoiceItem> newProposedItems = processRecurringEvent(invoiceId, accountId, thisEvent, adjustedNextEvent, targetDate, currency, invoiceItemGeneratorLogger, events.getRecurringBillingMode(), perSubscriptionFutureNotificationDate, internalCallContext);
                 proposedItems.addAll(newProposedItems);
             }
         }
-        final List<InvoiceItem> newProposedItems = processRecurringEvent(invoiceId, accountId, nextEvent, null, targetDate, currency, invoiceItemGeneratorLogger, nextEvent.getPlan().getRecurringBillingMode(), perSubscriptionFutureNotificationDate, internalCallContext);
+        final List<InvoiceItem> newProposedItems = processRecurringEvent(invoiceId, accountId, nextEvent, null, targetDate, currency, invoiceItemGeneratorLogger, events.getRecurringBillingMode(), perSubscriptionFutureNotificationDate, internalCallContext);
 
         proposedItems.addAll(newProposedItems);
 
@@ -238,7 +238,6 @@ public class FixedAndRecurringInvoiceItemGenerator extends InvoiceItemGenerator 
                                                                                                 accountId,
                                                                                                 thisEvent.getSubscription().getBundleId(),
                                                                                                 thisEvent.getSubscription().getId(),
-                                                                                                thisEvent.getPlan().getProduct().getName(),
                                                                                                 thisEvent.getPlan().getName(),
                                                                                                 thisEvent.getPlanPhase().getName(),
                                                                                                 itemDatum.getStartDate(),
@@ -400,7 +399,7 @@ public class FixedAndRecurringInvoiceItemGenerator extends InvoiceItemGenerator 
             if (fixedPrice != null) {
                 final FixedPriceInvoiceItem fixedPriceInvoiceItem = new FixedPriceInvoiceItem(invoiceId, accountId, thisEvent.getSubscription().getBundleId(),
                                                                                               thisEvent.getSubscription().getId(),
-                                                                                              thisEvent.getPlan().getProduct().getName(), thisEvent.getPlan().getName(), thisEvent.getPlanPhase().getName(),
+                                                                                              thisEvent.getPlan().getName(), thisEvent.getPlanPhase().getName(),
                                                                                               roundedStartDate, fixedPrice, currency);
 
                 // For debugging purposes
@@ -414,7 +413,7 @@ public class FixedAndRecurringInvoiceItemGenerator extends InvoiceItemGenerator 
     }
 
     @VisibleForTesting
-    void safetyBounds(final Iterable<InvoiceItem> resultingItems, final Multimap<UUID, LocalDate> createdItemsPerDayPerSubscription, final InternalCallContext internalCallContext) throws InvoiceApiException {
+    void safetyBounds(final Iterable<InvoiceItem> resultingItems, final Multimap<UUID, LocalDate> createdItemsPerDayPerSubscription, final InternalTenantContext internalCallContext) throws InvoiceApiException {
         // Trigger an exception if we detect the creation of similar items for a given subscription
         // See https://github.com/killbill/killbill/issues/664
         if (config.isSanitySafetyBoundEnabled(internalCallContext)) {
@@ -474,13 +473,13 @@ public class FixedAndRecurringInvoiceItemGenerator extends InvoiceItemGenerator 
         }
     }
 
-    private LocalDate trackInvoiceItemCreatedDay(final InvoiceItem invoiceItem, final Multimap<UUID, LocalDate> createdItemsPerDayPerSubscription, final InternalCallContext internalCallContext) {
+    private LocalDate trackInvoiceItemCreatedDay(final InvoiceItem invoiceItem, final Multimap<UUID, LocalDate> createdItemsPerDayPerSubscription, final InternalTenantContext internalCallContext) {
         final UUID subscriptionId = invoiceItem.getSubscriptionId();
         if (subscriptionId == null) {
             return null;
         }
 
-        final LocalDate createdDay = internalCallContext.toLocalDate(MoreObjects.firstNonNull(invoiceItem.getCreatedDate(), internalCallContext.getCreatedDate()));
+        final LocalDate createdDay = internalCallContext.toLocalDate(MoreObjects.firstNonNull(invoiceItem.getCreatedDate(), clock.getUTCNow()));
         createdItemsPerDayPerSubscription.put(subscriptionId, createdDay);
         return createdDay;
     }

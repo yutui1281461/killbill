@@ -1,6 +1,6 @@
 /*
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2016 Groupon, Inc
+ * Copyright 2014-2016 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -17,10 +17,6 @@
 
 package org.killbill.billing.catalog;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -30,7 +26,7 @@ import org.killbill.billing.catalog.api.CatalogEntity;
 
 import com.google.common.collect.Ordering;
 
-public class CatalogEntityCollection<T extends CatalogEntity> implements Collection<T>, Externalizable {
+public class CatalogEntityCollection<T extends CatalogEntity> implements Collection<T> {
 
     private final Map<String, T> data;
 
@@ -44,6 +40,7 @@ public class CatalogEntityCollection<T extends CatalogEntity> implements Collect
             addEntry(cur);
         }
     }
+
 
     public CatalogEntityCollection(final Iterable<T> entities) {
         this.data = new TreeMap<String, T>(Ordering.<String>natural());
@@ -85,18 +82,15 @@ public class CatalogEntityCollection<T extends CatalogEntity> implements Collect
         final Iterator<String> keyIterator = data.keySet().iterator();
         final Iterator it = new Iterator() {
             private String prevKey = null;
-
             @Override
             public boolean hasNext() {
                 return keyIterator.hasNext();
             }
-
             @Override
             public Object next() {
                 prevKey = keyIterator.next();
                 return data.get(prevKey);
             }
-
             @Override
             public void remove() {
                 if (prevKey != null) {
@@ -197,13 +191,4 @@ public class CatalogEntityCollection<T extends CatalogEntity> implements Collect
         return data.remove(entry.getName()) != null;
     }
 
-    @Override
-    public void readExternal(final ObjectInput in) throws IOException, ClassNotFoundException {
-        data.putAll((Map<? extends String, ? extends T>) in.readObject());
-    }
-
-    @Override
-    public void writeExternal(final ObjectOutput oo) throws IOException {
-        oo.writeObject(data);
-    }
 }

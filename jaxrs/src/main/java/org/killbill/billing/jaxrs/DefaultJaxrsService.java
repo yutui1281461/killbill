@@ -30,6 +30,7 @@ public class DefaultJaxrsService implements JaxrsService {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultJaxrsService.class);
 
+    private static final String JAXRS_SERVICE_NAME = "jaxrs-service";
 
     private final JaxrsExecutors jaxrsExecutors;
 
@@ -40,12 +41,7 @@ public class DefaultJaxrsService implements JaxrsService {
 
     @Override
     public String getName() {
-        return KILLBILL_SERVICES.JAXRS_SERVICE.getServiceName();
-    }
-
-    @Override
-    public int getRegistrationOrdering() {
-        return KILLBILL_SERVICES.JAXRS_SERVICE.getRegistrationOrdering();
+        return JAXRS_SERVICE_NAME;
     }
 
     @LifecycleHandlerType(LifecycleLevel.INIT_SERVICE)

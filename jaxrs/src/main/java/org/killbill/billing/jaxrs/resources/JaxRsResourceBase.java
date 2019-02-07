@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2015 Groupon, Inc
+ * Copyright 2014-2015 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -51,7 +52,6 @@ import org.killbill.billing.ObjectType;
 import org.killbill.billing.account.api.Account;
 import org.killbill.billing.account.api.AccountApiException;
 import org.killbill.billing.account.api.AccountUserApi;
-import org.killbill.billing.catalog.api.Currency;
 import org.killbill.billing.entitlement.api.BlockingState;
 import org.killbill.billing.entitlement.api.BlockingStateType;
 import org.killbill.billing.entitlement.api.EntitlementApiException;
@@ -59,19 +59,16 @@ import org.killbill.billing.entitlement.api.SubscriptionApi;
 import org.killbill.billing.entitlement.api.SubscriptionApiException;
 import org.killbill.billing.invoice.api.InvoicePayment;
 import org.killbill.billing.invoice.api.InvoicePaymentType;
-import org.killbill.billing.jaxrs.json.AuditLogJson;
 import org.killbill.billing.jaxrs.json.BillingExceptionJson;
 import org.killbill.billing.jaxrs.json.BillingExceptionJson.StackTraceElementJson;
 import org.killbill.billing.jaxrs.json.BlockingStateJson;
 import org.killbill.billing.jaxrs.json.CustomFieldJson;
 import org.killbill.billing.jaxrs.json.JsonBase;
-import org.killbill.billing.jaxrs.json.PaymentTransactionJson;
 import org.killbill.billing.jaxrs.json.PluginPropertyJson;
 import org.killbill.billing.jaxrs.json.TagJson;
 import org.killbill.billing.jaxrs.util.Context;
 import org.killbill.billing.jaxrs.util.JaxrsUriBuilder;
 import org.killbill.billing.junction.DefaultBlockingState;
-import org.killbill.billing.payment.api.InvoicePaymentApi;
 import org.killbill.billing.payment.api.Payment;
 import org.killbill.billing.payment.api.PaymentApi;
 import org.killbill.billing.payment.api.PaymentApiException;
@@ -89,7 +86,6 @@ import org.killbill.billing.util.api.TagDefinitionApiException;
 import org.killbill.billing.util.api.TagUserApi;
 import org.killbill.billing.util.audit.AccountAuditLogsForObjectType;
 import org.killbill.billing.util.audit.AuditLog;
-import org.killbill.billing.util.audit.AuditLogWithHistory;
 import org.killbill.billing.util.callcontext.CallContext;
 import org.killbill.billing.util.callcontext.TenantContext;
 import org.killbill.billing.util.customfield.CustomField;
@@ -113,7 +109,6 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -124,6 +119,7 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
     // Catalog API don't quite support multiple catalogs per tenant
     protected static final String catalogName = "unused";
 
+
     protected static final ObjectMapper mapper = new ObjectMapper();
 
     protected final JaxrsUriBuilder uriBuilder;
@@ -132,7 +128,6 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
     protected final AuditUserApi auditUserApi;
     protected final AccountUserApi accountUserApi;
     protected final PaymentApi paymentApi;
-    protected final InvoicePaymentApi invoicePaymentApi;
     protected final SubscriptionApi subscriptionApi;
     protected final Context context;
     protected final Clock clock;
@@ -146,7 +141,6 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
                              final AuditUserApi auditUserApi,
                              final AccountUserApi accountUserApi,
                              final PaymentApi paymentApi,
-                             final InvoicePaymentApi invoicePaymentApi,
                              final SubscriptionApi subscriptionApi,
                              final Clock clock,
                              final Context context) {
@@ -156,7 +150,6 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
         this.auditUserApi = auditUserApi;
         this.accountUserApi = accountUserApi;
         this.paymentApi = paymentApi;
-        this.invoicePaymentApi = invoicePaymentApi;
         this.subscriptionApi = subscriptionApi;
         this.clock = clock;
         this.context = context;
@@ -166,20 +159,19 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
         return null;
     }
 
-    protected Response addBlockingState(final BlockingStateJson json,
-                                        final UUID accountId,
-                                        final UUID blockableId,
-                                        final BlockingStateType type,
-                                        final String requestedDate,
-                                        final List<String> pluginPropertiesString,
-                                        final String createdBy,
-                                        final String reason,
-                                        final String comment,
-                                        final HttpServletRequest request,
-                                        @Nullable final UriInfo uriInfo) throws SubscriptionApiException, EntitlementApiException, AccountApiException {
+    public Response addBlockingState(final BlockingStateJson json,
+                                     final String id,
+                                     final BlockingStateType type,
+                                     final String requestedDate,
+                                     final List<String> pluginPropertiesString,
+                                     final String createdBy,
+                                     final String reason,
+                                     final String comment,
+                                     final HttpServletRequest request) throws SubscriptionApiException, EntitlementApiException, AccountApiException {
 
         final Iterable<PluginProperty> pluginProperties = extractPluginProperties(pluginPropertiesString);
-        final CallContext callContext = context.createCallContextNoAccountId(createdBy, reason, comment, request);
+        final CallContext callContext = context.createContext(createdBy, reason, comment, request);
+        final UUID blockableId = UUID.fromString(id);
 
         final boolean isBlockBilling = (json.isBlockBilling() != null && json.isBlockBilling());
         final boolean isBlockEntitlement = (json.isBlockEntitlement() != null && json.isBlockEntitlement());
@@ -188,10 +180,11 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
         final LocalDate resolvedRequestedDate = toLocalDate(requestedDate);
         final BlockingState input = new DefaultBlockingState(blockableId, type, json.getStateName(), json.getService(), isBlockChange, isBlockEntitlement, isBlockBilling, null);
         subscriptionApi.addBlockingState(input, resolvedRequestedDate, pluginProperties, callContext);
-        return uriInfo != null ?
-               uriBuilder.buildResponse(uriInfo, AccountResource.class, "getBlockingStates", accountId, ImmutableMap.<String, String>of(QUERY_BLOCKING_STATE_TYPES, type.name()) , request) :
-               null;
+        return Response.status(Status.OK).build();
     }
+
+
+
 
     protected Response getTags(final UUID accountId, final UUID taggedObjectId, final AuditMode auditMode, final boolean includeDeleted, final TenantContext context) throws TagDefinitionApiException {
         final List<Tag> tags = tagUserApi.getTagsForObject(taggedObjectId, getObjectType(), includeDeleted, context);
@@ -215,18 +208,21 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
         return Response.status(Response.Status.OK).entity(result).build();
     }
 
+
     protected Response createTags(final UUID id,
-                                  final List<UUID> tagList,
+                                  final String tagList,
                                   final UriInfo uriInfo,
                                   final CallContext context,
                                   final HttpServletRequest request) throws TagApiException {
-        tagUserApi.addTags(id, getObjectType(), tagList, context);
+        final Collection<UUID> input = getTagDefinitionUUIDs(tagList);
+        tagUserApi.addTags(id, getObjectType(), input, context);
         // TODO This will always return 201, even if some (or all) tags already existed (in which case we don't do anything)
         return uriBuilder.buildResponse(uriInfo, this.getClass(), "getTags", id, request);
     }
 
-    protected Collection<UUID> getTagDefinitionUUIDs(final List<String> tagList) {
-        return Collections2.transform(tagList, new Function<String, UUID>() {
+    protected Collection<UUID> getTagDefinitionUUIDs(final String tagList) {
+        final String[] tagParts = tagList.split(",\\s*");
+        return Collections2.transform(ImmutableList.copyOf(tagParts), new Function<String, UUID>() {
             @Override
             public UUID apply(final String input) {
                 return UUID.fromString(input);
@@ -235,10 +231,12 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
     }
 
     protected Response deleteTags(final UUID id,
-                                  final List<UUID> tagList,
+                                  final String tagList,
                                   final CallContext context) throws TagApiException {
-        tagUserApi.removeTags(id, getObjectType(), tagList, context);
-        return Response.status(Status.NO_CONTENT).build();
+        final Collection<UUID> input = getTagDefinitionUUIDs(tagList);
+        tagUserApi.removeTags(id, getObjectType(), input, context);
+
+        return Response.status(Response.Status.OK).build();
     }
 
     protected Response getCustomFields(final UUID id, final AuditMode auditMode, final TenantContext context) {
@@ -273,20 +271,6 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
         return uriBuilder.buildResponse(uriInfo, this.getClass(), "getCustomFields", id, request);
     }
 
-    protected Response modifyCustomFields(final UUID id,
-                                          final List<CustomFieldJson> customFields,
-                                          final CallContext context) throws CustomFieldApiException {
-        final LinkedList<CustomField> input = new LinkedList<CustomField>();
-        for (final CustomFieldJson cur : customFields) {
-            verifyNonNullOrEmpty(cur.getCustomFieldId(), "CustomFieldJson id needs to be set");
-            verifyNonNullOrEmpty(cur.getValue(), "CustomFieldJson value needs to be set");
-            input.add(new StringCustomField(cur.getCustomFieldId(), cur.getName(), cur.getValue(), getObjectType(), id, context.getCreatedDate()));
-        }
-
-        customFieldUserApi.updateCustomFields(input, context);
-        return Response.status(Status.NO_CONTENT).build();
-    }
-
     /**
      * @param id              the if of the object for which the custom fields apply
      * @param customFieldList a comma separated list of custom field ids or null if they should all be removed
@@ -295,20 +279,23 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
      * @throws CustomFieldApiException
      */
     protected Response deleteCustomFields(final UUID id,
-                                          final List<UUID> customFieldList,
+                                          @Nullable final String customFieldList,
                                           final CallContext context) throws CustomFieldApiException {
 
         // Retrieve all the custom fields for the object
         final List<CustomField> fields = customFieldUserApi.getCustomFieldsForObject(id, getObjectType(), context);
 
+        final String[] requestedIds = customFieldList != null ? customFieldList.split("\\s*,\\s*") : null;
+
         // Filter the proposed list to only keep the one that exist and indeed match our object
         final Iterable inputIterable = Iterables.filter(fields, new Predicate<CustomField>() {
             @Override
             public boolean apply(final CustomField input) {
-                if (customFieldList.isEmpty()) {
+                if (customFieldList == null) {
                     return true;
                 }
-                for (final UUID curId : customFieldList) {
+                for (final String cur : requestedIds) {
+                    final UUID curId = UUID.fromString(cur);
                     if (input.getId().equals(curId)) {
                         return true;
                     }
@@ -321,7 +308,7 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
             final List<CustomField> input = ImmutableList.<CustomField>copyOf(inputIterable);
             customFieldUserApi.removeCustomFields(input, context);
         }
-        return Response.status(Status.NO_CONTENT).build();
+        return Response.status(Response.Status.OK).build();
     }
 
     protected <E extends Entity, J extends JsonBase> Response buildStreamingPaginationResponse(final Pagination<E> entities,
@@ -348,7 +335,9 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
                     generator.close();
                 } finally {
                     // In case the client goes away (IOException), make sure to close the underlying DB connection
-                    entities.close();
+                    while (iterator.hasNext()) {
+                        iterator.next();
+                    }
                 }
             }
         };
@@ -372,86 +361,20 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
         }
     }
 
-    protected Payment getPaymentByIdOrKey(@Nullable final UUID paymentId, @Nullable final String externalKey, final Iterable<PluginProperty> pluginProperties, final TenantContext tenantContext) throws PaymentApiException {
-        Preconditions.checkArgument(paymentId != null || externalKey != null, "Need to set either paymentId or payment externalKey");
-        if (paymentId != null) {
-            return paymentApi.getPayment(paymentId, false, false, pluginProperties, tenantContext);
-        } else {
-            return paymentApi.getPaymentByExternalKey(externalKey, false, false, pluginProperties, tenantContext);
-        }
-    }
-
-    protected void completeTransactionInternal(final PaymentTransactionJson json,
-                                                   final Payment initialPayment,
-                                                   final List<String> paymentControlPluginNames,
-                                                   final Iterable<PluginProperty> pluginProperties,
-                                                   final TenantContext contextNoAccountId,
-                                                   final String createdBy,
-                                                   final String reason,
-                                                   final String comment,
-                                                   final UriInfo uriInfo,
-                                                   final HttpServletRequest request) throws PaymentApiException, AccountApiException {
-
-        final Account account = accountUserApi.getAccountById(initialPayment.getAccountId(), contextNoAccountId);
-        final BigDecimal amount = json == null ? null : json.getAmount();
-        final Currency currency = json == null ? null: json.getCurrency();
-
-        final CallContext callContext = context.createCallContextWithAccountId(account.getId(), createdBy, reason, comment, request);
-
-        final PaymentTransaction pendingOrSuccessTransaction = lookupPendingOrSuccessTransaction(initialPayment,
-                                                                                                 json != null ? json.getTransactionId() : null,
-                                                                                                 json != null ? json.getTransactionExternalKey() : null,
-                                                                                                 json != null ? json.getTransactionType() : null);
-        // If transaction was already completed, return early (See #626)
-        if (pendingOrSuccessTransaction.getTransactionStatus() == TransactionStatus.SUCCESS) {
-            return;
-        }
-
-        final PaymentTransaction pendingTransaction = pendingOrSuccessTransaction;
-        final PaymentOptions paymentOptions = createControlPluginApiPaymentOptions(paymentControlPluginNames);
-        switch (pendingTransaction.getTransactionType()) {
-            case AUTHORIZE:
-                paymentApi.createAuthorizationWithPaymentControl(account, initialPayment.getPaymentMethodId(), initialPayment.getId(), amount, currency, null,
-                                                                 initialPayment.getExternalKey(), pendingTransaction.getExternalKey(),
-                                                                 pluginProperties, paymentOptions, callContext);
-                break;
-            case CAPTURE:
-                paymentApi.createCaptureWithPaymentControl(account, initialPayment.getId(), amount, currency, null, pendingTransaction.getExternalKey(),
-                                                           pluginProperties, paymentOptions, callContext);
-                break;
-            case PURCHASE:
-                paymentApi.createPurchaseWithPaymentControl(account, initialPayment.getPaymentMethodId(), initialPayment.getId(), amount, currency, null,
-                                                            initialPayment.getExternalKey(), pendingTransaction.getExternalKey(),
-                                                            pluginProperties, paymentOptions, callContext);
-                break;
-            case CREDIT:
-                paymentApi.createCreditWithPaymentControl(account, initialPayment.getPaymentMethodId(), initialPayment.getId(), amount, currency, null,
-                                                          initialPayment.getExternalKey(), pendingTransaction.getExternalKey(),
-                                                          pluginProperties, paymentOptions, callContext);
-                break;
-            case REFUND:
-                paymentApi.createRefundWithPaymentControl(account, initialPayment.getId(), amount, currency, null,
-                                                          pendingTransaction.getExternalKey(), pluginProperties, paymentOptions, callContext);
-                break;
-            default:
-                throw new IllegalStateException("TransactionType " + pendingTransaction.getTransactionType() + " cannot be completed");
-        }
-    }
-
-    protected PaymentTransaction lookupPendingOrSuccessTransaction(final Payment initialPayment, @Nullable final UUID transactionId, @Nullable final String transactionExternalKey, @Nullable final TransactionType transactionType) throws PaymentApiException {
-        final Collection<PaymentTransaction> pendingTransaction = Collections2.filter(initialPayment.getTransactions(), new Predicate<PaymentTransaction>() {
+    protected PaymentTransaction lookupPendingOrSuccessTransaction(final Payment initialPayment, @Nullable final String transactionId, @Nullable final String transactionExternalKey, @Nullable final String transactionType) throws PaymentApiException {
+        final Collection<PaymentTransaction> pendingTransaction  =  Collections2.filter(initialPayment.getTransactions(), new Predicate<PaymentTransaction>() {
             @Override
             public boolean apply(final PaymentTransaction input) {
                 if (input.getTransactionStatus() != TransactionStatus.PENDING && input.getTransactionStatus() != TransactionStatus.SUCCESS) {
                     return false;
                 }
-                if (transactionId != null && !transactionId.equals(input.getId())) {
+                if (transactionId != null && !transactionId.equals(input.getId().toString())) {
                     return false;
                 }
                 if (transactionExternalKey != null && !transactionExternalKey.equals(input.getExternalKey())) {
                     return false;
                 }
-                if (transactionType != null && !transactionType.equals(input.getTransactionType())) {
+                if (transactionType != null && !transactionType.equals(input.getTransactionType().name())) {
                     return false;
                 }
                 //
@@ -468,13 +391,13 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
                 final String parameterValue;
                 if (transactionId != null) {
                     parameterType = "transactionId";
-                    parameterValue = transactionId.toString();
+                    parameterValue = transactionId;
                 } else if (transactionExternalKey != null) {
                     parameterType = "transactionExternalKey";
                     parameterValue = transactionExternalKey;
                 } else if (transactionType != null) {
                     parameterType = "transactionType";
-                    parameterValue = transactionType.name();
+                    parameterValue = transactionType;
                 } else {
                     parameterType = "paymentId";
                     parameterValue = initialPayment.getId().toString();
@@ -544,24 +467,23 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
         return properties;
     }
 
-    protected InvoicePayment createPurchaseForInvoice(final Account account, final UUID invoiceId, final BigDecimal amountToPay, final UUID paymentMethodId, final Boolean externalPayment, final String paymentExternalKey, final String transactionExternalKey, final Iterable<PluginProperty> pluginProperties, final CallContext callContext) throws PaymentApiException {
+    protected Payment createPurchaseForInvoice(final Account account, final UUID invoiceId, final BigDecimal amountToPay, final UUID paymentMethodId, final Boolean externalPayment, final String paymentExternalKey, final String transactionExternalKey, final Iterable<PluginProperty> pluginProperties, final CallContext callContext) throws PaymentApiException {
+
+        final List<PluginProperty> properties = new ArrayList<PluginProperty>();
+        final Iterator<PluginProperty> pluginPropertyIterator = pluginProperties.iterator();
+        while (pluginPropertyIterator.hasNext()) {
+            properties.add(pluginPropertyIterator.next());
+        }
+
+        final PluginProperty invoiceProperty = new PluginProperty("IPCD_INVOICE_ID" /* InvoicePaymentControlPluginApi.PROP_IPCD_INVOICE_ID (contract with plugin)  */,
+                                                                  invoiceId.toString(), false);
+        properties.add(invoiceProperty);
         try {
-            return invoicePaymentApi.createPurchaseForInvoicePayment(account,
-                                                                     invoiceId,
-                                                                     paymentMethodId,
-                                                                     null, amountToPay,
-                                                                     account.getCurrency(),
-                                                                     null,
-                                                                     paymentExternalKey,
-                                                                     transactionExternalKey,
-                                                                     pluginProperties,
-                                                                     createInvoicePaymentControlPluginApiPaymentOptions(externalPayment),
-                                                                     callContext);
+            return paymentApi.createPurchaseWithPaymentControl(account, paymentMethodId, null, amountToPay, account.getCurrency(), paymentExternalKey, transactionExternalKey,
+                                                               properties, createInvoicePaymentControlPluginApiPaymentOptions(externalPayment), callContext);
         } catch (final PaymentApiException e) {
-            if (e.getCode() == ErrorCode.PAYMENT_PLUGIN_EXCEPTION.getCode() /* &&
-                e.getMessage().contains("Invalid amount") */) { /* Plugin received bad input */
-                throw e;
-            } else if (e.getCode() == ErrorCode.PAYMENT_PLUGIN_API_ABORTED.getCode()) { /* Plugin aborted the call (e.g invoice already paid) */
+            if (e.getCode() == ErrorCode.PAYMENT_PLUGIN_EXCEPTION.getCode() &&
+                e.getMessage().contains("Aborted Payment for invoice")) {
                 return null;
             }
             throw e;
@@ -569,7 +491,7 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
     }
 
     protected PaymentOptions createInvoicePaymentControlPluginApiPaymentOptions(final boolean isExternalPayment) {
-        return createControlPluginApiPaymentOptions(isExternalPayment, ImmutableList.<String>of());
+        return createControlPluginApiPaymentOptions(isExternalPayment, ImmutableList.<String>of("__INVOICE_PAYMENT_CONTROL_PLUGIN__"));
     }
 
     protected PaymentOptions createControlPluginApiPaymentOptions(@Nullable final List<String> paymentControlPluginNames) {
@@ -633,6 +555,10 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
             final boolean expression = argument != null;
             Preconditions.checkArgument(expression, errorMessage);
         }
+    }
+
+    protected void verifyNumberOfElements(int actual, int expected, String errorMessage) {
+        Preconditions.checkArgument(actual == expected, errorMessage);
     }
 
     protected void logDeprecationParameterWarningIfNeeded(@Nullable final String deprecatedParam, final String... replacementParams) {
@@ -715,14 +641,5 @@ public abstract class JaxRsResourceBase implements JaxrsResource {
 
         // If nothing is found, return the latest transaction of given type
         return Iterables.getFirst(matchingTransactions, null);
-    }
-
-    protected List<AuditLogJson> getAuditLogsWithHistory(List<AuditLogWithHistory> auditLogWithHistory) {
-        return ImmutableList.<AuditLogJson>copyOf(Collections2.transform(auditLogWithHistory, new Function<AuditLogWithHistory, AuditLogJson>() {
-            @Override
-            public AuditLogJson apply(@Nullable final AuditLogWithHistory input) {
-                return new AuditLogJson(input);
-            }
-        }));
     }
 }

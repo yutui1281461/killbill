@@ -100,8 +100,6 @@ public class ApiEventBuilder extends EventBaseBuilder<ApiEventBuilder> {
             result = new ApiEventCancel(this);
         } else if (apiEventType == ApiEventType.UNCANCEL) {
             result = new ApiEventUncancel(this);
-        } else if (apiEventType == ApiEventType.UNDO_CHANGE) {
-            result = new ApiEventUndoChange(this);
         } else {
             throw new IllegalStateException("Unknown ApiEventType " + apiEventType);
         }

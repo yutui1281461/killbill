@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2016 Groupon, Inc
+ * Copyright 2014-2016 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -33,6 +33,7 @@ import org.killbill.billing.util.tag.api.user.TagEventBuilder;
 import org.killbill.billing.util.tag.dao.TagDao;
 import org.killbill.billing.util.tag.dao.TagDefinitionDao;
 import org.killbill.bus.api.PersistentBus;
+import org.killbill.clock.Clock;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -52,6 +53,8 @@ public abstract class AccountTestSuiteWithEmbeddedDB extends GuicyKillbillTestSu
     @Inject
     protected CacheControllerDispatcher controllerDispatcher;
     @Inject
+    protected Clock clock;
+    @Inject
     protected CustomFieldDao customFieldDao;
     @Inject
     protected PersistentBus bus;
@@ -66,20 +69,12 @@ public abstract class AccountTestSuiteWithEmbeddedDB extends GuicyKillbillTestSu
 
     @BeforeClass(groups = "slow")
     protected void beforeClass() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
-        final Injector injector = Guice.createInjector(new TestAccountModuleWithEmbeddedDB(configSource, clock));
+        final Injector injector = Guice.createInjector(new TestAccountModuleWithEmbeddedDB(configSource));
         injector.injectMembers(this);
     }
 
     @BeforeMethod(groups = "slow")
     public void beforeMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         super.beforeMethod();
         controllerDispatcher.clearAll();
         bus.start();

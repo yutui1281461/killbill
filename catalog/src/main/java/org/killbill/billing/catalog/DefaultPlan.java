@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2017 Groupon, Inc
+ * Copyright 2014-2017 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -22,6 +22,7 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -36,11 +37,9 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlID;
 import javax.xml.bind.annotation.XmlIDREF;
-import javax.xml.bind.annotation.XmlRootElement;
 
 import org.joda.time.DateTime;
 import org.killbill.billing.ErrorCode;
-import org.killbill.billing.catalog.api.BillingMode;
 import org.killbill.billing.catalog.api.BillingPeriod;
 import org.killbill.billing.catalog.api.CatalogApiException;
 import org.killbill.billing.catalog.api.PhaseType;
@@ -50,15 +49,14 @@ import org.killbill.billing.catalog.api.PlanPhasePriceOverride;
 import org.killbill.billing.catalog.api.PriceList;
 import org.killbill.billing.catalog.api.Product;
 import org.killbill.billing.catalog.api.Recurring;
-import org.killbill.billing.catalog.api.StaticCatalog;
 import org.killbill.billing.catalog.api.TimeUnit;
+import org.killbill.billing.util.cache.ExternalizableInput;
+import org.killbill.billing.util.cache.ExternalizableOutput;
+import org.killbill.billing.util.cache.MapperHolder;
 import org.killbill.xmlloader.ValidatingConfig;
 import org.killbill.xmlloader.ValidationError;
 import org.killbill.xmlloader.ValidationErrors;
 
-import com.google.common.annotations.VisibleForTesting;
-
-@XmlRootElement(name = "plans")
 @XmlAccessorType(XmlAccessType.NONE)
 public class DefaultPlan extends ValidatingConfig<StandaloneCatalog> implements Plan, Externalizable {
 
@@ -68,19 +66,12 @@ public class DefaultPlan extends ValidatingConfig<StandaloneCatalog> implements 
     @XmlID
     private String name;
 
-    @XmlAttribute(required = false)
-    private String prettyName;
-
     @XmlElement(required = false)
     private Date effectiveDateForExistingSubscriptions;
 
     @XmlElement(required = true)
     @XmlIDREF
     private DefaultProduct product;
-
-    // In order to support older versions where recurringBillingMode is defined at the StandaloneCatalog level, we don't require that field.
-    @XmlElement(required = false)
-    private BillingMode recurringBillingMode;
 
     @XmlElementWrapper(name = "initialPhases", required = false)
     @XmlElement(name = "phase", required = false)
@@ -98,21 +89,12 @@ public class DefaultPlan extends ValidatingConfig<StandaloneCatalog> implements 
 
     private String priceListName;
 
-    // Not exposed in XML
-    @VisibleForTesting
-    StandaloneCatalog staticCatalog;
-
     // For deserialization
     public DefaultPlan() {
-    }
-
-    public DefaultPlan(final StandaloneCatalog staticCatalog) {
-        this.staticCatalog = staticCatalog;
         initialPhases = new DefaultPlanPhase[0];
     }
 
-    public DefaultPlan(final StandaloneCatalog staticCatalog, final String planName, final DefaultPlan in, final PlanPhasePriceOverride[] overrides) {
-        this.staticCatalog = staticCatalog;
+    public DefaultPlan(final String planName, final DefaultPlan in, final PlanPhasePriceOverride[] overrides) {
         this.name = planName;
         this.effectiveDateForExistingSubscriptions = in.getEffectiveDateForExistingSubscriptions();
         this.product = (DefaultProduct) in.getProduct();
@@ -123,7 +105,6 @@ public class DefaultPlan extends ValidatingConfig<StandaloneCatalog> implements 
         }
         this.finalPhase = new DefaultPlanPhase(this, in.getFinalPhase(), overrides[overrides.length - 1]);
         this.priceListName = in.getPriceListName();
-        this.recurringBillingMode = in.getRecurringBillingMode();
     }
 
     @Override
@@ -131,14 +112,9 @@ public class DefaultPlan extends ValidatingConfig<StandaloneCatalog> implements 
         return effectiveDateForExistingSubscriptions;
     }
 
-    @Override
-    public StaticCatalog getCatalog() {
-        return staticCatalog;
-    }
-
-    @Override
-    public BillingMode getRecurringBillingMode() {
-        return recurringBillingMode;
+    public void setEffectiveDateForExistingSubscriptions(
+            final Date effectiveDateForExistingSubscriptions) {
+        this.effectiveDateForExistingSubscriptions = effectiveDateForExistingSubscriptions;
     }
 
     @Override
@@ -146,9 +122,19 @@ public class DefaultPlan extends ValidatingConfig<StandaloneCatalog> implements 
         return initialPhases;
     }
 
+    public DefaultPlan setInitialPhases(final DefaultPlanPhase[] phases) {
+        this.initialPhases = phases;
+        return this;
+    }
+
     @Override
     public Product getProduct() {
         return product;
+    }
+
+    public DefaultPlan setProduct(final Product product) {
+        this.product = (DefaultProduct) product;
+        return this;
     }
 
     @Override
@@ -156,19 +142,29 @@ public class DefaultPlan extends ValidatingConfig<StandaloneCatalog> implements 
         return priceListName;
     }
 
+    public DefaultPlan setPriceListName(final String priceListName) {
+        this.priceListName = priceListName;
+        return this;
+    }
+
     @Override
     public String getName() {
         return name;
     }
 
-    @Override
-    public String getPrettyName() {
-        return prettyName;
+    public DefaultPlan setName(final String name) {
+        this.name = name;
+        return this;
     }
 
     @Override
     public DefaultPlanPhase getFinalPhase() {
         return finalPhase;
+    }
+
+    public DefaultPlan setFinalPhase(final DefaultPlanPhase finalPhase) {
+        this.finalPhase = finalPhase;
+        return this;
     }
 
     @Override
@@ -206,6 +202,11 @@ public class DefaultPlan extends ValidatingConfig<StandaloneCatalog> implements 
         return plansAllowedInBundle;
     }
 
+    public DefaultPlan setPlansAllowedInBundle(final Integer plansAllowedInBundle) {
+        this.plansAllowedInBundle = plansAllowedInBundle;
+        return this;
+    }
+
     @Override
     public Iterator<PlanPhase> getInitialPhaseIterator() {
         final Collection<PlanPhase> list = new ArrayList<PlanPhase>();
@@ -214,27 +215,19 @@ public class DefaultPlan extends ValidatingConfig<StandaloneCatalog> implements 
     }
 
     @Override
-    public void initialize(final StandaloneCatalog catalog) {
-        super.initialize(catalog);
+    public void initialize(final StandaloneCatalog catalog, final URI sourceURI) {
+        super.initialize(catalog, sourceURI);
         CatalogSafetyInitializer.initializeNonRequiredNullFieldsWithDefaultValue(this);
 
-        if (prettyName == null) {
-            this.prettyName = name;
-        }
         if (finalPhase != null) {
             finalPhase.setPlan(this);
-            finalPhase.initialize(catalog);
+            finalPhase.initialize(catalog, sourceURI);
         }
         for (final DefaultPlanPhase p : initialPhases) {
             p.setPlan(this);
-            p.initialize(catalog);
+            p.initialize(catalog, sourceURI);
         }
-        if (recurringBillingMode == null) {
-            this.recurringBillingMode = catalog.getRecurringBillingMode();
-        }
-
         this.priceListName = this.priceListName != null ? this.priceListName : findPriceListForPlan(catalog);
-        this.staticCatalog = catalog;
     }
 
     @Override
@@ -244,16 +237,11 @@ public class DefaultPlan extends ValidatingConfig<StandaloneCatalog> implements 
             errors.add(new ValidationError(String.format("Price effective date %s is before catalog effective date '%s'",
                                                          effectiveDateForExistingSubscriptions,
                                                          catalog.getEffectiveDate()),
-                                           DefaultPlan.class, ""));
-        }
-
-        // Pure usage based plans would not have a recurringBillingMode
-        if (!BillingPeriod.NO_BILLING_PERIOD.equals(getRecurringBillingPeriod()) && recurringBillingMode == null) {
-            errors.add(new ValidationError(String.format("Invalid recurring billingMode for plan '%s'", name), DefaultPlan.class, ""));
+                                           catalog.getCatalogURI(), DefaultPlan.class, ""));
         }
 
         if (product == null) {
-            errors.add(new ValidationError(String.format("Invalid product for plan '%s'", name), DefaultPlan.class, ""));
+            errors.add(new ValidationError(String.format("Invalid product for plan '%s'", name), catalog.getCatalogURI(), DefaultPlan.class, ""));
         }
 
         for (final DefaultPlanPhase cur : initialPhases) {
@@ -261,7 +249,7 @@ public class DefaultPlan extends ValidatingConfig<StandaloneCatalog> implements 
             if (cur.getPhaseType() == PhaseType.EVERGREEN) {
                 errors.add(new ValidationError(String.format("Initial Phase %s of plan %s cannot be of type %s",
                                                              cur.getName(), name, cur.getPhaseType()),
-                                               DefaultPlan.class, ""));
+                                               catalog.getCatalogURI(), DefaultPlan.class, ""));
             }
         }
 
@@ -270,58 +258,13 @@ public class DefaultPlan extends ValidatingConfig<StandaloneCatalog> implements 
         if (finalPhase.getPhaseType() == PhaseType.TRIAL || finalPhase.getPhaseType() == PhaseType.DISCOUNT) {
             errors.add(new ValidationError(String.format("Final Phase %s of plan %s cannot be of type %s",
                                                          finalPhase.getName(), name, finalPhase.getPhaseType()),
-                                           DefaultPlan.class, ""));
+                                           catalog.getCatalogURI(), DefaultPlan.class, ""));
         }
         // Safety check
         if (plansAllowedInBundle == null) {
             throw new IllegalStateException("plansAllowedInBundle should have been automatically been initialized with DEFAULT_NON_REQUIRED_INTEGER_FIELD_VALUE (-1)");
         }
         return errors;
-    }
-
-    public void setEffectiveDateForExistingSubscriptions(
-            final Date effectiveDateForExistingSubscriptions) {
-        this.effectiveDateForExistingSubscriptions = effectiveDateForExistingSubscriptions;
-    }
-
-    public DefaultPlan setName(final String name) {
-        this.name = name;
-        return this;
-    }
-
-    public DefaultPlan setPrettyName(final String prettyName) {
-        this.prettyName = prettyName;
-        return this;
-    }
-
-    public DefaultPlan setFinalPhase(final DefaultPlanPhase finalPhase) {
-        this.finalPhase = finalPhase;
-        return this;
-    }
-
-    public DefaultPlan setProduct(final Product product) {
-        this.product = (DefaultProduct) product;
-        return this;
-    }
-
-    public DefaultPlan setPriceListName(final String priceListName) {
-        this.priceListName = priceListName;
-        return this;
-    }
-
-    public DefaultPlan setInitialPhases(final DefaultPlanPhase[] phases) {
-        this.initialPhases = phases;
-        return this;
-    }
-
-    public DefaultPlan setPlansAllowedInBundle(final Integer plansAllowedInBundle) {
-        this.plansAllowedInBundle = plansAllowedInBundle;
-        return this;
-    }
-
-    public DefaultPlan setRecurringBillingMode(final BillingMode billingMode) {
-        this.recurringBillingMode = billingMode;
-        return this;
     }
 
     @Override
@@ -411,31 +354,12 @@ public class DefaultPlan extends ValidatingConfig<StandaloneCatalog> implements 
     }
 
     @Override
-    public void readExternal(final ObjectInput in) throws IOException, ClassNotFoundException {
-        this.name = in.readUTF();
-        this.prettyName = in.readUTF();
-        this.effectiveDateForExistingSubscriptions = (Date) in.readObject();
-        this.product = (DefaultProduct) in.readObject();
-        this.recurringBillingMode = in.readBoolean() ? BillingMode.valueOf(in.readUTF()) : null;
-        this.initialPhases = (DefaultPlanPhase[]) in.readObject();
-        this.finalPhase = (DefaultPlanPhase) in.readObject();
-        this.plansAllowedInBundle = in.readInt();
-        this.priceListName = in.readUTF();
+    public void readExternal(final ObjectInput in) throws IOException {
+        MapperHolder.mapper().readerForUpdating(this).readValue(new ExternalizableInput(in));
     }
 
     @Override
     public void writeExternal(final ObjectOutput oo) throws IOException {
-        oo.writeUTF(name);
-        oo.writeUTF(prettyName);
-        oo.writeObject(effectiveDateForExistingSubscriptions);
-        oo.writeObject(product);
-        oo.writeBoolean(recurringBillingMode != null);
-        if (recurringBillingMode != null) {
-            oo.writeUTF(recurringBillingMode.name());
-        }
-        oo.writeObject(initialPhases);
-        oo.writeObject(finalPhase);
-        oo.writeInt(plansAllowedInBundle);
-        oo.writeUTF(priceListName);
+        MapperHolder.mapper().writeValue(new ExternalizableOutput(oo), this);
     }
 }

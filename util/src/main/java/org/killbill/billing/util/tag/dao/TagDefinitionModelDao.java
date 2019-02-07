@@ -27,38 +27,32 @@ import org.killbill.billing.util.entity.dao.EntityModelDaoBase;
 import org.killbill.billing.util.tag.ControlTagType;
 import org.killbill.billing.util.tag.TagDefinition;
 
-import com.google.common.base.Joiner;
-
 public class TagDefinitionModelDao extends EntityModelDaoBase implements EntityModelDao<TagDefinition> {
 
-    private static final Joiner JOINER = Joiner.on(",");
     private String name;
-    private String applicableObjectTypes;
     private String description;
     private Boolean isActive;
 
     public TagDefinitionModelDao() { /* For the DAO mapper */ }
 
-    public TagDefinitionModelDao(final UUID id, final DateTime createdDate, final DateTime updatedDate, final String name, final String description, String applicableObjectTypes) {
+    public TagDefinitionModelDao(final UUID id, final DateTime createdDate, final DateTime updatedDate, final String name, final String description) {
         super(id, createdDate, updatedDate);
         this.name = name;
         this.description = description;
         this.isActive = true;
-        this.applicableObjectTypes = applicableObjectTypes;
     }
 
     public TagDefinitionModelDao(final ControlTagType tag) {
-        this(tag.getId(), null, null, tag.name(), tag.getDescription(), JOINER.join(tag.getApplicableObjectTypes()));
+        this(tag.getId(), null, null, tag.name(), tag.getDescription());
     }
 
-    public TagDefinitionModelDao(final DateTime createdDate, final String name, final String description, String applicableObjectTypes) {
-        this(UUIDs.randomUUID(), createdDate, createdDate, name, description, applicableObjectTypes);
+    public TagDefinitionModelDao(final DateTime createdDate, final String name, final String description) {
+        this(UUIDs.randomUUID(), createdDate, createdDate, name, description);
     }
-
 
     public TagDefinitionModelDao(final TagDefinition tagDefinition) {
         this(tagDefinition.getId(), tagDefinition.getCreatedDate(), tagDefinition.getUpdatedDate(), tagDefinition.getName(),
-             tagDefinition.getDescription(), JOINER.join(tagDefinition.getApplicableObjectTypes()));
+             tagDefinition.getDescription());
     }
 
     public String getName() {
@@ -71,14 +65,6 @@ public class TagDefinitionModelDao extends EntityModelDaoBase implements EntityM
 
     public Boolean getIsActive() {
         return isActive;
-    }
-
-    public String getApplicableObjectTypes() {
-        return applicableObjectTypes;
-    }
-
-    public void setApplicableObjectTypes(final String applicableObjectTypes) {
-        this.applicableObjectTypes = applicableObjectTypes;
     }
 
     public void setName(final String name) {
@@ -99,7 +85,6 @@ public class TagDefinitionModelDao extends EntityModelDaoBase implements EntityM
         sb.append("TagDefinitionModelDao");
         sb.append("{name='").append(name).append('\'');
         sb.append(", description='").append(description).append('\'');
-        sb.append(", applicableObjectTypes='").append(applicableObjectTypes).append('\'');
         sb.append(", isActive=").append(isActive);
         sb.append('}');
         return sb.toString();
@@ -125,9 +110,6 @@ public class TagDefinitionModelDao extends EntityModelDaoBase implements EntityM
         if (isActive != null ? !isActive.equals(that.isActive) : that.isActive != null) {
             return false;
         }
-        if (applicableObjectTypes != null ? !applicableObjectTypes.equals(that.applicableObjectTypes) : that.applicableObjectTypes != null) {
-            return false;
-        }
         if (name != null ? !name.equals(that.name) : that.name != null) {
             return false;
         }
@@ -141,7 +123,6 @@ public class TagDefinitionModelDao extends EntityModelDaoBase implements EntityM
         result = 31 * result + (name != null ? name.hashCode() : 0);
         result = 31 * result + (description != null ? description.hashCode() : 0);
         result = 31 * result + (isActive != null ? isActive.hashCode() : 0);
-        result = 31 * result + (applicableObjectTypes != null ? applicableObjectTypes.hashCode() : 0);
         return result;
     }
 

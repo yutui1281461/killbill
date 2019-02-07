@@ -23,33 +23,34 @@ import java.util.UUID;
 import javax.annotation.Nullable;
 
 import org.joda.time.DateTime;
+import org.joda.time.LocalDate;
 import org.killbill.billing.entitlement.api.BlockingState;
 import org.killbill.billing.entitlement.api.BlockingStateType;
 import org.killbill.billing.util.audit.AccountAuditLogs;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 
-@ApiModel(value="BlockingState", parent = JsonBase.class)
 public class BlockingStateJson extends JsonBase {
 
-    private final UUID blockedId;
+    @ApiModelProperty(dataType = "java.util.UUID")
+    private final String blockedId;
     private final String stateName;
     private final String service;
-    private final Boolean isBlockChange;
-    private final Boolean isBlockEntitlement;
-    private final Boolean isBlockBilling;
+    private final Boolean blockChange;
+    private final Boolean blockEntitlement;
+    private final Boolean blockBilling;
     private final DateTime effectiveDate;
     private final BlockingStateType type;
 
     @JsonCreator
-    public BlockingStateJson(@JsonProperty("blockedId") final UUID blockedId,
+    public BlockingStateJson(@JsonProperty("blockedId") final String blockedId,
                              @JsonProperty("stateName") final String stateName,
                              @JsonProperty("service") final String service,
-                             @JsonProperty("isBlockChange") final Boolean isBlockChange,
-                             @JsonProperty("isBlockEntitlement") final Boolean isBlockEntitlement,
-                             @JsonProperty("isBlockBilling") final Boolean isBlockBilling,
+                             @JsonProperty("blockChange") final Boolean blockChange,
+                             @JsonProperty("blockEntitlement") final Boolean blockEntitlement,
+                             @JsonProperty("blockBilling") final Boolean blockBilling,
                              @JsonProperty("effectiveDate") final DateTime effectiveDate,
                              @JsonProperty("type") final BlockingStateType type,
                              @JsonProperty("auditLogs") @Nullable final List<AuditLogJson> auditLogs) {
@@ -57,15 +58,15 @@ public class BlockingStateJson extends JsonBase {
         this.blockedId = blockedId;
         this.stateName = stateName;
         this.service = service;
-        this.isBlockChange = isBlockChange;
-        this.isBlockEntitlement = isBlockEntitlement;
-        this.isBlockBilling = isBlockBilling;
+        this.blockChange = blockChange;
+        this.blockEntitlement = blockEntitlement;
+        this.blockBilling = blockBilling;
         this.effectiveDate = effectiveDate;
         this.type = type;
     }
 
     public BlockingStateJson(final BlockingState input, final AccountAuditLogs accountAuditLogs) {
-        this(input.getBlockedId(),
+        this(input.getBlockedId().toString(),
              input.getStateName(),
              input.getService(),
              input.isBlockChange(),
@@ -77,7 +78,7 @@ public class BlockingStateJson extends JsonBase {
     }
 
 
-    public UUID getBlockedId() {
+    public String getBlockedId() {
         return blockedId;
     }
 
@@ -89,19 +90,16 @@ public class BlockingStateJson extends JsonBase {
         return service;
     }
 
-    @JsonProperty("isBlockChange")
     public Boolean isBlockChange() {
-        return isBlockChange;
+        return blockChange;
     }
 
-    @JsonProperty("isBlockEntitlement")
     public Boolean isBlockEntitlement() {
-        return isBlockEntitlement;
+        return blockEntitlement;
     }
 
-    @JsonProperty("isBlockBilling")
     public Boolean isBlockBilling() {
-        return isBlockBilling;
+        return blockBilling;
     }
 
     public DateTime getEffectiveDate() {
@@ -123,13 +121,13 @@ public class BlockingStateJson extends JsonBase {
 
         final BlockingStateJson that = (BlockingStateJson) o;
 
-        if (isBlockChange != that.isBlockChange) {
+        if (blockChange != that.blockChange) {
             return false;
         }
-        if (isBlockEntitlement != that.isBlockEntitlement) {
+        if (blockEntitlement != that.blockEntitlement) {
             return false;
         }
-        if (isBlockBilling != that.isBlockBilling) {
+        if (blockBilling != that.blockBilling) {
             return false;
         }
         if (blockedId != null ? !blockedId.equals(that.blockedId) : that.blockedId != null) {
@@ -153,9 +151,9 @@ public class BlockingStateJson extends JsonBase {
         int result = blockedId != null ? blockedId.hashCode() : 0;
         result = 31 * result + (stateName != null ? stateName.hashCode() : 0);
         result = 31 * result + (service != null ? service.hashCode() : 0);
-        result = 31 * result + (isBlockChange ? 1 : 0);
-        result = 31 * result + (isBlockEntitlement ? 1 : 0);
-        result = 31 * result + (isBlockBilling ? 1 : 0);
+        result = 31 * result + (blockChange ? 1 : 0);
+        result = 31 * result + (blockEntitlement ? 1 : 0);
+        result = 31 * result + (blockBilling ? 1 : 0);
         result = 31 * result + (effectiveDate != null ? effectiveDate.hashCode() : 0);
         result = 31 * result + (type != null ? type.hashCode() : 0);
         return result;
@@ -167,9 +165,9 @@ public class BlockingStateJson extends JsonBase {
                "blockedId='" + blockedId + '\'' +
                ", stateName='" + stateName + '\'' +
                ", service='" + service + '\'' +
-               ", isBlockChange=" + isBlockChange +
-               ", isBlockEntitlement=" + isBlockEntitlement +
-               ", isBlockBilling=" + isBlockBilling +
+               ", blockChange=" + blockChange +
+               ", blockEntitlement=" + blockEntitlement +
+               ", blockBilling=" + blockBilling +
                ", effectiveDate=" + effectiveDate +
                ", type=" + type +
                '}';

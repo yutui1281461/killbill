@@ -49,7 +49,6 @@ CREATE TABLE tag_definitions (
     record_id serial unique,
     id varchar(36) NOT NULL,
     name varchar(20) NOT NULL,
-    applicable_object_types varchar(500),
     description varchar(200) NOT NULL,
     is_active boolean default true,
     created_by varchar(50) NOT NULL,
@@ -68,7 +67,6 @@ CREATE TABLE tag_definition_history (
     id varchar(36) NOT NULL,
     target_record_id bigint /*! unsigned */ not null,
     name varchar(30) NOT NULL,
-    applicable_object_types varchar(500),
     description varchar(200),
     is_active boolean default true,
     change_type varchar(6) NOT NULL,
@@ -156,7 +154,7 @@ DROP TABLE IF EXISTS notifications;
 CREATE TABLE notifications (
     record_id serial unique,
     class_name varchar(256) NOT NULL,
-    event_json text NOT NULL,
+    event_json varchar(2048) NOT NULL,
     user_token varchar(36),
     created_date datetime NOT NULL,
     creating_owner varchar(50) NOT NULL,
@@ -180,7 +178,7 @@ DROP TABLE IF EXISTS notifications_history;
 CREATE TABLE notifications_history (
     record_id serial unique,
     class_name varchar(256) NOT NULL,
-    event_json text NOT NULL,
+    event_json varchar(2048) NOT NULL,
     user_token varchar(36),
     created_date datetime NOT NULL,
     creating_owner varchar(50) NOT NULL,
@@ -201,7 +199,7 @@ DROP TABLE IF EXISTS bus_events;
 CREATE TABLE bus_events (
     record_id serial unique,
     class_name varchar(128) NOT NULL,
-    event_json text NOT NULL,
+    event_json varchar(2048) NOT NULL,
     user_token varchar(36),
     created_date datetime NOT NULL,
     creating_owner varchar(50) NOT NULL,
@@ -221,7 +219,7 @@ DROP TABLE IF EXISTS bus_events_history;
 CREATE TABLE bus_events_history (
     record_id serial unique,
     class_name varchar(128) NOT NULL,
-    event_json text NOT NULL,
+    event_json varchar(2048) NOT NULL,
     user_token varchar(36),
     created_date datetime NOT NULL,
     creating_owner varchar(50) NOT NULL,

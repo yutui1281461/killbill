@@ -33,7 +33,6 @@ public class PushNotificationKey implements NotificationEvent {
     private final UUID objectId;
     private final int attemptNumber;
     private final String url;
-    private final String metaData;
 
     @JsonCreator
     public PushNotificationKey(@JsonProperty("tenantId") final UUID tenantId,
@@ -42,7 +41,6 @@ public class PushNotificationKey implements NotificationEvent {
                                @JsonProperty("objectType") final String objectType,
                                @JsonProperty("objectId") final UUID objectId,
                                @JsonProperty("attemptNumber")  final int attemptNumber,
-                               @JsonProperty("metaData")  final String metaData,
                                @JsonProperty("url") final String url) {
         this.tenantId = tenantId;
         this.accountId = accountId;
@@ -50,13 +48,12 @@ public class PushNotificationKey implements NotificationEvent {
         this.objectType = objectType;
         this.objectId = objectId;
         this.attemptNumber = attemptNumber;
-        this.metaData = metaData;
         this.url = url;
     }
 
     public PushNotificationKey(final PushNotificationKey key, final int attemptNumber) {
         this(key.getTenantId(), key.getAccountId(), key.getEventType(), key.getObjectType(), key.getObjectId(),
-             attemptNumber, key.getMetaData(), key.getUrl());
+             attemptNumber, key.getUrl());
     }
 
     public UUID getTenantId() {
@@ -87,10 +84,6 @@ public class PushNotificationKey implements NotificationEvent {
         return url;
     }
 
-    public String getMetaData() {
-        return metaData;
-    }
-
     @Override
     public String toString() {
         return "PushNotificationKey{" +
@@ -99,7 +92,6 @@ public class PushNotificationKey implements NotificationEvent {
                ", eventType='" + eventType + '\'' +
                ", objectType='" + objectType + '\'' +
                ", objectId=" + objectId +
-               ", metaData=" + metaData +
                ", attemptNumber=" + attemptNumber +
                ", url='" + url + '\'' +
                '}';

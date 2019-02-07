@@ -23,9 +23,7 @@ import org.apache.shiro.subject.Subject;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.swagger.annotations.ApiModel;
 
-@ApiModel(value="Subject")
 public class SubjectJson {
 
     private final String principal;

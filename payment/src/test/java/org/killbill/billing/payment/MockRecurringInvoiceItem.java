@@ -42,8 +42,6 @@ public class MockRecurringInvoiceItem extends EntityBase implements InvoiceItem 
     protected final BigDecimal amount;
     protected final Currency currency;
     protected final String usageName;
-    protected final Integer quantity;
-    protected final String itemDetails;
 
     public MockRecurringInvoiceItem(final UUID invoiceId, final UUID accountId, final UUID bundleId, final UUID subscriptionId,
                                     final String planName, final String phaseName, final String usageName, final LocalDate startDate, final LocalDate endDate,
@@ -51,15 +49,37 @@ public class MockRecurringInvoiceItem extends EntityBase implements InvoiceItem 
         this(invoiceId, accountId, bundleId, subscriptionId, planName, phaseName, usageName, startDate, endDate, amount, currency, rate, null);
     }
 
+    public MockRecurringInvoiceItem(final UUID invoiceId, final UUID accountId, final UUID bundleId, final UUID subscriptionId,
+                                    final String planName, final String phaseName, final String usageName, final LocalDate startDate, final LocalDate endDate,
+                                    final BigDecimal amount, final BigDecimal rate, final Currency currency, final UUID reversedItemId) {
+        this(invoiceId, accountId, bundleId, subscriptionId, planName, phaseName, usageName, startDate, endDate,
+             amount, currency, rate, reversedItemId);
+    }
+
+    public MockRecurringInvoiceItem(final UUID id, final UUID invoiceId, final UUID accountId, final UUID bundleId,
+                                    final UUID subscriptionId, final String planName, final String phaseName, final String usageName,
+                                    final LocalDate startDate, final LocalDate endDate, final BigDecimal amount,
+                                    final BigDecimal rate, final Currency currency) {
+        this(id, invoiceId, accountId, bundleId, subscriptionId, planName, phaseName, usageName, startDate, endDate, amount, currency, rate, null);
+
+    }
+
+    public MockRecurringInvoiceItem(final UUID id, final UUID invoiceId, final UUID accountId, final UUID bundleId,
+                                    final UUID subscriptionId, final String planName, final String phaseName, final String usageName,
+                                    final LocalDate startDate, final LocalDate endDate, final BigDecimal amount,
+                                    final BigDecimal rate, final Currency currency, final UUID reversedItemId) {
+        this(id, invoiceId, accountId, bundleId, subscriptionId, planName, phaseName, usageName, startDate, endDate, amount, currency, rate, reversedItemId);
+    }
+
     public MockRecurringInvoiceItem(final UUID invoiceId, final UUID accountId, final UUID bundleId, final UUID subscriptionId, final String planName, final String phaseName, final String usageName,
                                     final LocalDate startDate, final LocalDate endDate, final BigDecimal amount, final Currency currency, final BigDecimal rate, final UUID reversedItemId) {
         this(UUID.randomUUID(), invoiceId, accountId, bundleId, subscriptionId, planName, phaseName, usageName,
-             startDate, endDate, amount, currency, rate, reversedItemId, null, null);
+             startDate, endDate, amount, currency, rate, reversedItemId);
     }
 
     public MockRecurringInvoiceItem(final UUID id, final UUID invoiceId, final UUID accountId, @Nullable final UUID bundleId, @Nullable final UUID subscriptionId, final String planName, final String phaseName,
                                     final String usageName, final LocalDate startDate, final LocalDate endDate, final BigDecimal amount, final Currency currency,
-                                    final BigDecimal rate, final UUID reversedItemId, final Integer quantity, final String itemDetails) {
+                                    final BigDecimal rate, final UUID reversedItemId) {
         super(id);
         this.invoiceId = invoiceId;
         this.accountId = accountId;
@@ -74,8 +94,6 @@ public class MockRecurringInvoiceItem extends EntityBase implements InvoiceItem 
         this.currency = currency;
         this.rate = rate;
         this.reversedItemId = reversedItemId;
-        this.quantity = quantity;
-        this.itemDetails = itemDetails;
     }
 
     @Override
@@ -104,22 +122,7 @@ public class MockRecurringInvoiceItem extends EntityBase implements InvoiceItem 
     }
 
     @Override
-    public String getProductName() {
-        return null;
-    }
-
-    @Override
-    public String getPrettyProductName() {
-        return null;
-    }
-
-    @Override
     public String getPlanName() {
-        return planName;
-    }
-
-    @Override
-    public String getPrettyPlanName() {
         return planName;
     }
 
@@ -129,17 +132,7 @@ public class MockRecurringInvoiceItem extends EntityBase implements InvoiceItem 
     }
 
     @Override
-    public String getPrettyPhaseName() {
-        return phaseName;
-    }
-
-    @Override
     public String getUsageName() {
-        return usageName;
-    }
-
-    @Override
-    public String getPrettyUsageName() {
         return usageName;
     }
 
@@ -177,12 +170,6 @@ public class MockRecurringInvoiceItem extends EntityBase implements InvoiceItem 
     public UUID getLinkedItemId() {
         return reversedItemId;
     }
-
-    @Override
-    public Integer getQuantity() { return quantity; }
-
-    @Override
-    public String getItemDetails() { return itemDetails; }
 
     @Override
     public boolean matches(final Object other) {

@@ -44,6 +44,7 @@ public class DefaultKillbillNodesService implements KillbillNodesService {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultKillbillNodesService.class);
 
+    public static final String NODES_SERVICE_NAME = "nodes-service";
 
     private final NodeInfoDao nodeInfoDao;
     private final PluginsInfoApi pluginInfoApi;
@@ -62,12 +63,7 @@ public class DefaultKillbillNodesService implements KillbillNodesService {
 
     @Override
     public String getName() {
-        return KILLBILL_SERVICES.NODES_SERVICE.getServiceName() ;
-    }
-
-    @Override
-    public int getRegistrationOrdering() {
-        return KILLBILL_SERVICES.NODES_SERVICE.getRegistrationOrdering();
+        return NODES_SERVICE_NAME;
     }
 
     @LifecycleHandlerType(LifecycleLevel.BOOT)

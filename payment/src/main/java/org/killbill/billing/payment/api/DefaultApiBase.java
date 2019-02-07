@@ -25,7 +25,6 @@ import org.killbill.billing.callcontext.InternalTenantContext;
 import org.killbill.billing.payment.invoice.InvoicePaymentControlPluginApi;
 import org.killbill.billing.util.callcontext.CallContext;
 import org.killbill.billing.util.callcontext.InternalCallContextFactory;
-import org.killbill.billing.util.callcontext.TenantContext;
 import org.killbill.billing.util.config.definition.PaymentConfig;
 
 import com.google.common.collect.ImmutableList;
@@ -40,14 +39,15 @@ public class DefaultApiBase {
         this.internalCallContextFactory = internalCallContextFactory;
     }
 
-    protected List<String> toPaymentControlPluginNames(final PaymentOptions paymentOptions, final TenantContext callContext) {
+    protected List<String> toPaymentControlPluginNames(final PaymentOptions paymentOptions, final CallContext callContext) {
         final InternalTenantContext internalTenantContext = internalCallContextFactory.createInternalTenantContextWithoutAccountRecordId(callContext);
 
         // Special path for JAX-RS InvoicePayment endpoints (see JaxRsResourceBase)
         final List<String> controlPluginNames = paymentConfig.getPaymentControlPluginNames(internalTenantContext);
         if (controlPluginNames != null &&
             paymentOptions.getPaymentControlPluginNames() != null &&
-            paymentOptions.getPaymentControlPluginNames().isEmpty()) {
+            paymentOptions.getPaymentControlPluginNames().size() == 1 &&
+            InvoicePaymentControlPluginApi.PLUGIN_NAME.equals(paymentOptions.getPaymentControlPluginNames().get(0))) {
             final List<String> paymentControlPluginNames = new LinkedList<String>(paymentOptions.getPaymentControlPluginNames());
             paymentControlPluginNames.addAll(controlPluginNames);
             return paymentControlPluginNames;

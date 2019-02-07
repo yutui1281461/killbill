@@ -72,6 +72,8 @@ getAllPaymentsForInvoiceIncludedInit() ::= <<
   ;
 >>
 
+
+
 getInvoicePayments() ::= <<
     SELECT <allTableFields("")>
     FROM <tableName()>

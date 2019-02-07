@@ -23,24 +23,22 @@ import org.killbill.billing.account.api.AccountEmail;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-
-@ApiModel(value="AccountEmail", parent = JsonBase.class)
 public class AccountEmailJson extends JsonBase {
 
-    private final UUID accountId;
+    @ApiModelProperty(dataType = "java.util.UUID")
+    private final String accountId;
     @ApiModelProperty(required = true)
     private final String email;
 
     @JsonCreator
-    public AccountEmailJson(@JsonProperty("accountId") final UUID accountId, @JsonProperty("email") final String email) {
+    public AccountEmailJson(@JsonProperty("accountId") final String accountId, @JsonProperty("email") final String email) {
         this.accountId = accountId;
         this.email = email;
     }
 
-    public UUID getAccountId() {
+    public String getAccountId() {
         return accountId;
     }
 
@@ -53,7 +51,7 @@ public class AccountEmailJson extends JsonBase {
         return new AccountEmail() {
             @Override
             public UUID getAccountId() {
-                return accountId;
+                return UUID.fromString(accountId);
             }
 
             @Override

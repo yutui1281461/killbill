@@ -69,29 +69,17 @@ public abstract class EntitlementTestSuiteNoDB extends GuicyKillbillTestSuiteNoD
 
     @BeforeClass(groups = "fast")
     protected void beforeClass() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
-        final Injector injector = Guice.createInjector(new TestEntitlementModuleNoDB(configSource, clock));
+        final Injector injector = Guice.createInjector(new TestEntitlementModuleNoDB(configSource));
         injector.injectMembers(this);
     }
 
     @BeforeMethod(groups = "fast")
     public void beforeMethod() throws Exception {
-        if (hasFailed()) {
-            return;
-        }
-
         bus.start();
     }
 
     @AfterMethod(groups = "fast")
     public void afterMethod() {
-        if (hasFailed()) {
-            return;
-        }
-
         bus.stop();
     }
 }

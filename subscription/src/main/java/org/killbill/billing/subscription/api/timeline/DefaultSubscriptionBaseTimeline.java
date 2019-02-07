@@ -65,7 +65,7 @@ public class DefaultSubscriptionBaseTimeline implements SubscriptionBaseTimeline
 
         final List<ExistingEvent> result = new LinkedList<SubscriptionBaseTimeline.ExistingEvent>();
 
-        Plan prevPlan = null;
+        String prevPlanName = null;
         String prevProductName = null;
         BillingPeriod prevBillingPeriod = null;
         String prevPriceListName = null;
@@ -84,7 +84,7 @@ public class DefaultSubscriptionBaseTimeline implements SubscriptionBaseTimeline
             BillingPeriod billingPeriod = null;
             String priceListName = null;
             PhaseType phaseType = null;
-            Plan plan = null;
+            String planName = null;
             String planPhaseName = null;
             Integer billCycleDayLocal = null;
 
@@ -93,9 +93,9 @@ public class DefaultSubscriptionBaseTimeline implements SubscriptionBaseTimeline
                 case PHASE:
                     final PhaseEvent phaseEV = (PhaseEvent) cur;
                     planPhaseName = phaseEV.getPhase();
+                    phaseType = catalog.findPhase(phaseEV.getPhase(), cur.getEffectiveDate(), startDate).getPhaseType();
                     // A PHASE event always occurs within the same plan (and is never the first event)
-                    phaseType = prevPlan != null ? prevPlan.findPhase(phaseEV.getPhase()).getPhaseType() : null;
-                    plan = prevPlan;
+                    planName = prevPlanName;
                     productName = prevProductName;
                     billingPeriod = getBillingPeriod(catalog, phaseEV.getPhase(), cur.getEffectiveDate(), startDate);
                     priceListName = prevPriceListName;
@@ -109,9 +109,10 @@ public class DefaultSubscriptionBaseTimeline implements SubscriptionBaseTimeline
                 case API_USER:
                     final ApiEvent userEV = (ApiEvent) cur;
                     apiType = userEV.getApiEventType();
+                    planName = userEV.getEventPlan();
                     planPhaseName = userEV.getEventPlanPhase();
-                    plan = (userEV.getEventPlan() != null) ? catalog.findPlan(userEV.getEventPlan(), cur.getEffectiveDate(), startDate) : null;
-                    phaseType = (plan != null && userEV.getEventPlanPhase() != null) ? plan.findPhase(userEV.getEventPlanPhase()).getPhaseType() : prevPhaseType;
+                    final Plan plan = (userEV.getEventPlan() != null) ? catalog.findPlan(userEV.getEventPlan(), cur.getEffectiveDate(), startDate) : null;
+                    phaseType = (userEV.getEventPlanPhase() != null) ? catalog.findPhase(userEV.getEventPlanPhase(), cur.getEffectiveDate(), startDate).getPhaseType() : prevPhaseType;
                     productName = (plan != null) ? plan.getProduct().getName() : prevProductName;
                     billingPeriod = (userEV.getEventPlanPhase() != null) ? getBillingPeriod(catalog, userEV.getEventPlanPhase(), cur.getEffectiveDate(), startDate) : prevBillingPeriod;
                     priceListName = (userEV.getPriceList() != null) ? userEV.getPriceList() : prevPriceListName;
@@ -120,10 +121,10 @@ public class DefaultSubscriptionBaseTimeline implements SubscriptionBaseTimeline
 
             final SubscriptionBaseTransitionType transitionType = SubscriptionBaseTransitionData.toSubscriptionTransitionType(cur.getType(), apiType);
 
-            final String planNameWithClosure = plan != null ? plan.getName() : null;
+            final String planNameWithClosure = planName;
             final String planPhaseNameWithClosure = planPhaseName;
             final Integer billCycleDayLocalWithClosure = billCycleDayLocal;
-            final PlanPhaseSpecifier spec = new PlanPhaseSpecifier(planNameWithClosure, phaseType);
+            final PlanPhaseSpecifier spec = new PlanPhaseSpecifier(planName, phaseType);
             result.add(new ExistingEvent() {
                 @Override
                 public SubscriptionBaseTransitionType getSubscriptionTransitionType() {
@@ -166,7 +167,7 @@ public class DefaultSubscriptionBaseTimeline implements SubscriptionBaseTimeline
                 }
             });
 
-            prevPlan = plan;
+            prevPlanName = planName;
             prevProductName = productName;
             prevBillingPeriod = billingPeriod;
             prevPriceListName = priceListName;

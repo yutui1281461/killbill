@@ -64,11 +64,6 @@ public class MockProduct implements Product {
     }
 
     @Override
-    public String getPrettyName() {
-        return name;
-    }
-
-    @Override
     public Collection<Product> getAvailable() {
         return available;
     }

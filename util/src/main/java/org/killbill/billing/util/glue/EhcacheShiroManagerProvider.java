@@ -28,7 +28,6 @@ import org.apache.shiro.cache.Cache;
 import org.apache.shiro.cache.CacheException;
 import org.apache.shiro.mgt.DefaultSecurityManager;
 import org.apache.shiro.mgt.SecurityManager;
-import org.apache.shiro.mgt.SubjectDAO;
 import org.ehcache.integrations.shiro.EhcacheShiro;
 import org.ehcache.integrations.shiro.EhcacheShiroManager;
 import org.killbill.billing.util.config.definition.EhCacheConfig;
@@ -37,22 +36,19 @@ import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.MetricRegistry;
 
-public class EhcacheShiroManagerProvider extends EhCacheProviderBase implements Provider<EhcacheShiroManager> {
+public class EhcacheShiroManagerProvider extends CacheProviderBase implements Provider<EhcacheShiroManager> {
 
     private final SecurityManager securityManager;
-    private final SubjectDAO subjectDAO;
     private final CacheManager eh107CacheManager;
     private final org.ehcache.CacheManager ehcacheCacheManager;
 
     @Inject
     public EhcacheShiroManagerProvider(final SecurityManager securityManager,
-                                       final SubjectDAO subjectDAO,
                                        final CacheManager eh107CacheManager,
                                        final MetricRegistry metricRegistry,
                                        final EhCacheConfig cacheConfig) {
         super(metricRegistry, cacheConfig);
         this.securityManager = securityManager;
-        this.subjectDAO = subjectDAO;
         this.eh107CacheManager = eh107CacheManager;
         this.ehcacheCacheManager = getEhcacheManager();
     }
@@ -67,7 +63,7 @@ public class EhcacheShiroManagerProvider extends EhCacheProviderBase implements 
             // For RBAC only (see also KillbillJdbcTenantRealmProvider)
             final DefaultSecurityManager securityManager = (DefaultSecurityManager) this.securityManager;
             securityManager.setCacheManager(shiroEhCacheManager);
-            securityManager.setSubjectDAO(subjectDAO);
+            securityManager.setSubjectDAO(new KillBillSubjectDAO());
         }
 
         return shiroEhCacheManager;
@@ -92,9 +88,6 @@ public class EhcacheShiroManagerProvider extends EhCacheProviderBase implements 
 
         private final Logger log = LoggerFactory.getLogger(EhcacheShiroManagerWrapper.class);
 
-        // shiro-activeSessionCache is lazily created by the first request and EhcacheShiroManagerProvider isn't thread safe
-        private final Object shiroCacheLock = new Object();
-
         private final EhcacheShiroManagerProvider ehcacheShiroManagerProvider;
 
         EhcacheShiroManagerWrapper(final EhcacheShiroManagerProvider ehcacheShiroManagerProvider) {
@@ -107,17 +100,10 @@ public class EhcacheShiroManagerProvider extends EhCacheProviderBase implements 
             org.ehcache.Cache<Object, Object> cache = getCacheManager().getCache(name, Object.class, Object.class);
 
             if (cache == null) {
-                synchronized (shiroCacheLock) {
-                    cache = getCacheManager().getCache(name, Object.class, Object.class);
-                    if (cache == null) {
-                        log.info("Cache with name {} does not yet exist.  Creating now.", name);
-                        ehcacheShiroManagerProvider.createCache(eh107CacheManager, name, Object.class, Object.class);
-                        cache = getCacheManager().getCache(name, Object.class, Object.class);
-                        log.info("Added EhcacheShiro named [{}]", name);
-                    } else {
-                        log.info("Using existing EhcacheShiro named [{}]", name);
-                    }
-                }
+                log.info("Cache with name {} does not yet exist.  Creating now.", name);
+                ehcacheShiroManagerProvider.createCache(eh107CacheManager, name, Object.class, Object.class);
+                cache = getCacheManager().getCache(name, Object.class, Object.class);
+                log.info("Added EhcacheShiro named [{}]", name);
             } else {
                 log.info("Using existing EhcacheShiro named [{}]", name);
             }

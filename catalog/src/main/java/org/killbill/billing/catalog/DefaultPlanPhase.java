@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2015 Groupon, Inc
+ * Copyright 2014-2015 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -18,10 +18,7 @@
 
 package org.killbill.billing.catalog;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
+import java.net.URI;
 import java.util.Arrays;
 
 import javax.annotation.Nullable;
@@ -39,22 +36,14 @@ import org.killbill.billing.catalog.api.PhaseType;
 import org.killbill.billing.catalog.api.Plan;
 import org.killbill.billing.catalog.api.PlanPhase;
 import org.killbill.billing.catalog.api.PlanPhasePriceOverride;
-import org.killbill.billing.catalog.api.Product;
 import org.killbill.billing.catalog.api.Recurring;
 import org.killbill.billing.catalog.api.Usage;
-import org.killbill.billing.catalog.api.UsagePriceOverride;
 import org.killbill.xmlloader.ValidatingConfig;
 import org.killbill.xmlloader.ValidationError;
 import org.killbill.xmlloader.ValidationErrors;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-
 @XmlAccessorType(XmlAccessType.NONE)
-public class DefaultPlanPhase extends ValidatingConfig<StandaloneCatalog> implements PlanPhase, Externalizable {
-
-    @XmlAttribute(required = false)
-    private String prettyName;
+public class DefaultPlanPhase extends ValidatingConfig<StandaloneCatalog> implements PlanPhase {
 
     @XmlAttribute(required = true)
     private PhaseType type;
@@ -72,37 +61,23 @@ public class DefaultPlanPhase extends ValidatingConfig<StandaloneCatalog> implem
     @XmlElement(name = "usage", required = false)
     private DefaultUsage[] usages;
 
-    // Not exposed in XML
-    private String planName;
-    private Product product;
+    //Not exposed in XML
+    private Plan plan;
 
-    // Required for deserialization
     public DefaultPlanPhase() {
-        this.usages = new DefaultUsage[0];
+        usages = new DefaultUsage[0];
     }
 
-    public DefaultPlanPhase(final Plan parentPlan, final DefaultPlanPhase in, @Nullable final PlanPhasePriceOverride override) {
+    public DefaultPlanPhase(final DefaultPlan parentPlan, final DefaultPlanPhase in, @Nullable final PlanPhasePriceOverride override) {
         this.type = in.getPhaseType();
         this.duration = (DefaultDuration) in.getDuration();
         this.fixed = override != null && override.getFixedPrice() != null ? new DefaultFixed((DefaultFixed) in.getFixed(), override) : (DefaultFixed) in.getFixed();
         this.recurring = override != null && override.getRecurringPrice() != null ? new DefaultRecurring((DefaultRecurring) in.getRecurring(), override) : (DefaultRecurring) in.getRecurring();
         this.usages = new DefaultUsage[in.getUsages().length];
         for (int i = 0; i < in.getUsages().length; i++) {
-            final Usage curUsage = in.getUsages()[i];
-            if (override != null && override.getUsagePriceOverrides() != null) {
-                final UsagePriceOverride usagePriceOverride = Iterables.tryFind(override.getUsagePriceOverrides(), new Predicate<UsagePriceOverride>() {
-                    @Override
-                    public boolean apply(final UsagePriceOverride input) {
-                        return input != null && input.getName().equals(curUsage.getName());
-                    }
-                }).orNull();
-                usages[i] = (usagePriceOverride != null) ? new DefaultUsage(in.getUsages()[i], usagePriceOverride, override.getCurrency()) : (DefaultUsage) curUsage;
-            } else {
-                usages[i] = (DefaultUsage) curUsage;
-            }
+            usages[i] = (DefaultUsage) in.getUsages()[i];
         }
-        this.planName = parentPlan.getName();
-        this.product = parentPlan.getProduct();
+        this.plan = parentPlan;
     }
 
     public static String phaseName(final String planName, final PhaseType phasetype) {
@@ -132,7 +107,7 @@ public class DefaultPlanPhase extends ValidatingConfig<StandaloneCatalog> implem
             }
         }
         // Second, check if there are limits defined at the product section.
-        return product.compliesWithLimits(unit, value);
+        return plan.getProduct().compliesWithLimits(unit, value);
     }
 
     @Override
@@ -152,12 +127,7 @@ public class DefaultPlanPhase extends ValidatingConfig<StandaloneCatalog> implem
 
     @Override
     public String getName() {
-        return phaseName(planName, this.getPhaseType());
-    }
-
-    @Override
-    public String getPrettyName() {
-        return prettyName != null ? prettyName : getName();
+        return phaseName(plan.getName(), this.getPhaseType());
     }
 
     @Override
@@ -167,14 +137,15 @@ public class DefaultPlanPhase extends ValidatingConfig<StandaloneCatalog> implem
 
     @Override
     public ValidationErrors validate(final StandaloneCatalog catalog, final ValidationErrors errors) {
-        if (planName == null) {
-            errors.add(new ValidationError(String.format("Invalid plan for phase '%s'", type), DefaultPlanPhase.class, ""));
+
+        if (plan == null) {
+            errors.add(new ValidationError(String.format("Invalid plan for phase '%s'", type), catalog.getCatalogURI(), DefaultPlanPhase.class, ""));
         }
 
         if (fixed == null && recurring == null && usages.length == 0) {
             errors.add(new ValidationError(String.format("Phase %s of plan %s need to define at least either a fixed or recurrring or usage section.",
-                                                         type.toString(), planName),
-                                           DefaultPlanPhase.class, type.toString()));
+                                                         type.toString(), plan.getName()),
+                                           catalog.getCatalogURI(), DefaultPlanPhase.class, type.toString()));
         }
         if (fixed != null) {
             fixed.validate(catalog, errors);
@@ -189,28 +160,24 @@ public class DefaultPlanPhase extends ValidatingConfig<StandaloneCatalog> implem
     }
 
     @Override
-    public void initialize(final StandaloneCatalog root) {
-        super.initialize(root);
+    public void initialize(final StandaloneCatalog root, final URI uri) {
+
+        super.initialize(root, uri);
         CatalogSafetyInitializer.initializeNonRequiredNullFieldsWithDefaultValue(this);
 
         if (fixed != null) {
-            fixed.initialize(root);
+            fixed.initialize(root, uri);
         }
         if (recurring != null) {
-            recurring.initialize(root);
-            recurring.setPlan(planName);
+            recurring.initialize(root, uri);
+            recurring.setPlan(plan);
             recurring.setPhase(this);
         }
-        for (final DefaultUsage usage : usages) {
-            usage.initialize(root);
+        for (DefaultUsage usage : usages) {
+            usage.initialize(root, uri);
             usage.setPhase(this);
         }
-        duration.initialize(root);
-    }
-
-    public DefaultPlanPhase setPrettyName(final String prettyName) {
-        this.prettyName = prettyName;
-        return this;
+        duration.initialize(root, uri);
     }
 
     public DefaultPlanPhase setFixed(final DefaultFixed fixed) {
@@ -239,8 +206,7 @@ public class DefaultPlanPhase extends ValidatingConfig<StandaloneCatalog> implem
     }
 
     public DefaultPlanPhase setPlan(final Plan plan) {
-        this.planName = plan.getName();
-        this.product = plan.getProduct();
+        this.plan = plan;
         return this;
     }
 
@@ -294,38 +260,8 @@ public class DefaultPlanPhase extends ValidatingConfig<StandaloneCatalog> implem
         sb.append(", fixed=").append(fixed);
         sb.append(", recurring=").append(recurring);
         sb.append(", usages=").append(Arrays.toString(usages));
-        sb.append(", plan=").append(planName);
+        sb.append(", plan=").append(plan.getName());
         sb.append('}');
         return sb.toString();
-    }
-
-    @Override
-    public void writeExternal(final ObjectOutput out) throws IOException {
-        out.writeBoolean(prettyName != null);
-        if (prettyName != null) {
-            out.writeUTF(prettyName);
-        }
-        out.writeBoolean(type != null);
-        if (type != null) {
-            out.writeUTF(type.name());
-        }
-        out.writeObject(duration);
-        out.writeObject(fixed);
-        out.writeObject(recurring);
-        out.writeObject(usages);
-        out.writeUTF(planName);
-        out.writeObject(product);
-    }
-
-    @Override
-    public void readExternal(final ObjectInput in) throws IOException, ClassNotFoundException {
-        this.prettyName = in.readBoolean() ? in.readUTF() : null;
-        this.type = in.readBoolean() ? PhaseType.valueOf(in.readUTF()) : null;
-        this.duration = (DefaultDuration) in.readObject();
-        this.fixed = (DefaultFixed) in.readObject();
-        this.recurring = (DefaultRecurring) in.readObject();
-        this.usages = (DefaultUsage[]) in.readObject();
-        this.planName = in.readUTF();
-        this.product = (Product) in.readObject();
     }
 }

@@ -23,17 +23,15 @@ import org.killbill.billing.overdue.api.OverdueState;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.swagger.annotations.ApiModel;
 
-@ApiModel(value="OverdueStateConfig")
 public class OverdueStateConfigJson {
 
     private final String name;
     private final Boolean isClearState;
     private final OverdueConditionJson condition;
     private final String externalMessage;
-    private final Boolean isBlockChanges;
-    private final Boolean isDisableEntitlement;
+    private final Boolean blockChanges;
+    private final Boolean disableEntitlement;
     private final OverdueCancellationPolicy subscriptionCancellationPolicy;
     private final Integer autoReevaluationIntervalDays;
 
@@ -42,16 +40,16 @@ public class OverdueStateConfigJson {
                                   @JsonProperty("isClearState") final Boolean isClearState,
                                   @JsonProperty("condition") final OverdueConditionJson condition,
                                   @JsonProperty("externalMessage") final String externalMessage,
-                                  @JsonProperty("isBlockChanges") final Boolean isBlockChanges,
-                                  @JsonProperty("isDisableEntitlement") final Boolean isDisableEntitlement,
+                                  @JsonProperty("blockChanges") final Boolean blockChanges,
+                                  @JsonProperty("disableEntitlement") final Boolean disableEntitlement,
                                   @JsonProperty("subscriptionCancellationPolicy") final OverdueCancellationPolicy subscriptionCancellationPolicy,
                                   @JsonProperty("autoReevaluationIntervalDays") final Integer autoReevaluationInterval) {
         this.name = name;
         this.isClearState = isClearState;
         this.condition = condition;
         this.externalMessage = externalMessage;
-        this.isBlockChanges = isBlockChanges;
-        this.isDisableEntitlement = isDisableEntitlement;
+        this.blockChanges = blockChanges;
+        this.disableEntitlement = disableEntitlement;
         this.subscriptionCancellationPolicy = subscriptionCancellationPolicy;
         this.autoReevaluationIntervalDays = autoReevaluationInterval;
     }
@@ -61,12 +59,12 @@ public class OverdueStateConfigJson {
         this.isClearState = input.isClearState();
         this.condition = input.getOverdueCondition() != null ? new OverdueConditionJson(input.getOverdueCondition()) : null;
         this.externalMessage = input.getExternalMessage();
-        this.isBlockChanges = input.isBlockChanges();
-        this.isDisableEntitlement = input.isDisableEntitlementAndChangesBlocked();
+        this.blockChanges = input.isBlockChanges();
+        this.disableEntitlement = input.isDisableEntitlementAndChangesBlocked();
         this.subscriptionCancellationPolicy = input.getOverdueCancellationPolicy();
         Integer tmpAutoReevaluationIntervalDays = null;
         try {
-            tmpAutoReevaluationIntervalDays = input.getAutoReevaluationInterval().toJodaPeriod().getDays();
+            tmpAutoReevaluationIntervalDays = input.getAutoReevaluationInterval().getDays();
         } catch (final OverdueApiException e) {
         } finally {
             this.autoReevaluationIntervalDays = tmpAutoReevaluationIntervalDays;
@@ -90,14 +88,12 @@ public class OverdueStateConfigJson {
         return externalMessage;
     }
 
-    @JsonProperty("isBlockChanges")
-    public Boolean isBlockChanges() {
-        return isBlockChanges;
+    public Boolean getBlockChanges() {
+        return blockChanges;
     }
 
-    @JsonProperty("isDisableEntitlement")
-    public Boolean isDisableEntitlement() {
-        return isDisableEntitlement;
+    public Boolean getDisableEntitlement() {
+        return disableEntitlement;
     }
 
     public OverdueCancellationPolicy getSubscriptionCancellationPolicy() {
@@ -131,10 +127,10 @@ public class OverdueStateConfigJson {
         if (externalMessage != null ? !externalMessage.equals(that.externalMessage) : that.externalMessage != null) {
             return false;
         }
-        if (isBlockChanges != null ? !isBlockChanges.equals(that.isBlockChanges) : that.isBlockChanges != null) {
+        if (blockChanges != null ? !blockChanges.equals(that.blockChanges) : that.blockChanges != null) {
             return false;
         }
-        if (isDisableEntitlement != null ? !isDisableEntitlement.equals(that.isDisableEntitlement) : that.isDisableEntitlement != null) {
+        if (disableEntitlement != null ? !disableEntitlement.equals(that.disableEntitlement) : that.disableEntitlement != null) {
             return false;
         }
         if (subscriptionCancellationPolicy != that.subscriptionCancellationPolicy) {
@@ -150,8 +146,8 @@ public class OverdueStateConfigJson {
         result = 31 * result + (isClearState != null ? isClearState.hashCode() : 0);
         result = 31 * result + (condition != null ? condition.hashCode() : 0);
         result = 31 * result + (externalMessage != null ? externalMessage.hashCode() : 0);
-        result = 31 * result + (isBlockChanges != null ? isBlockChanges.hashCode() : 0);
-        result = 31 * result + (isDisableEntitlement != null ? isDisableEntitlement.hashCode() : 0);
+        result = 31 * result + (blockChanges != null ? blockChanges.hashCode() : 0);
+        result = 31 * result + (disableEntitlement != null ? disableEntitlement.hashCode() : 0);
         result = 31 * result + (subscriptionCancellationPolicy != null ? subscriptionCancellationPolicy.hashCode() : 0);
         result = 31 * result + (autoReevaluationIntervalDays != null ? autoReevaluationIntervalDays.hashCode() : 0);
         return result;
@@ -164,8 +160,8 @@ public class OverdueStateConfigJson {
                ", isClearState=" + isClearState +
                ", condition=" + condition +
                ", externalMessage='" + externalMessage + '\'' +
-               ", isBlockChanges=" + isBlockChanges +
-               ", isDisableEntitlement=" + isDisableEntitlement +
+               ", blockChanges=" + blockChanges +
+               ", disableEntitlement=" + disableEntitlement +
                ", subscriptionCancellationPolicy=" + subscriptionCancellationPolicy +
                ", autoReevaluationIntervalDays=" + autoReevaluationIntervalDays +
                '}';

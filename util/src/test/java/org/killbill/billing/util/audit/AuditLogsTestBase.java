@@ -19,9 +19,9 @@ package org.killbill.billing.util.audit;
 import java.util.List;
 import java.util.UUID;
 
-import org.joda.time.DateTime;
-import org.killbill.billing.util.UtilTestSuiteNoDB;
 import org.mockito.Mockito;
+
+import org.killbill.billing.util.UtilTestSuiteNoDB;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -39,8 +39,7 @@ public abstract class AuditLogsTestBase extends UtilTestSuiteNoDB {
 
     protected AuditLog createAuditLog() {
         final AuditLog auditLog = Mockito.mock(AuditLog.class);
-        final DateTime utcNow = clock.getUTCNow();
-        Mockito.when(auditLog.getCreatedDate()).thenReturn(utcNow);
+        Mockito.when(auditLog.getCreatedDate()).thenReturn(clock.getUTCNow());
         Mockito.when(auditLog.getReasonCode()).thenReturn(UUID.randomUUID().toString());
         Mockito.when(auditLog.getUserName()).thenReturn(UUID.randomUUID().toString());
         Mockito.when(auditLog.getUserToken()).thenReturn(UUID.randomUUID().toString());

@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2016 Groupon, Inc
+ * Copyright 2014-2016 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -21,30 +21,24 @@ package org.killbill.billing.usage.glue;
 import org.killbill.billing.GuicyKillbillTestWithEmbeddedDBModule;
 import org.killbill.billing.account.glue.DefaultAccountModule;
 import org.killbill.billing.platform.api.KillbillConfigSource;
-import org.killbill.billing.util.glue.AuditModule;
 import org.killbill.billing.util.glue.CacheModule;
 import org.killbill.billing.util.glue.ConfigModule;
 import org.killbill.billing.util.glue.NonEntityDaoModule;
-import org.killbill.clock.ClockMock;
 
 public class TestUsageModuleWithEmbeddedDB extends TestUsageModule {
 
-    private final ClockMock clock;
-
-    public TestUsageModuleWithEmbeddedDB(final KillbillConfigSource configSource, final ClockMock clock) {
+    public TestUsageModuleWithEmbeddedDB(final KillbillConfigSource configSource) {
         super(configSource);
-        this.clock = clock;
     }
 
     @Override
     public void configure() {
         super.configure();
 
-        install(new GuicyKillbillTestWithEmbeddedDBModule(configSource, clock));
+        install(new GuicyKillbillTestWithEmbeddedDBModule(configSource));
         install(new CacheModule(configSource));
         install(new ConfigModule(configSource));
         install(new NonEntityDaoModule(configSource));
         install(new DefaultAccountModule(configSource));
-        install(new AuditModule(configSource));
     }
 }

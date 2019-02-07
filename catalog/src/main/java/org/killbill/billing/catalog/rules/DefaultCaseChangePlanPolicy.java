@@ -1,9 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
  *
- * The Billing Project licenses this file to you under the Apache License, version 2.0
+ * Ning licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
  * License.  You may obtain a copy of the License at:
  *
@@ -18,10 +16,6 @@
 
 package org.killbill.billing.catalog.rules;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.net.URI;
 
 import javax.xml.bind.annotation.XmlElement;
@@ -34,14 +28,10 @@ import org.killbill.billing.catalog.api.rules.CaseChangePlanPolicy;
 import org.killbill.xmlloader.ValidationErrors;
 
 @XmlSeeAlso(DefaultCaseChange.class)
-public class DefaultCaseChangePlanPolicy extends DefaultCaseChange<BillingActionPolicy> implements CaseChangePlanPolicy, Externalizable {
+public class DefaultCaseChangePlanPolicy extends DefaultCaseChange<BillingActionPolicy> implements CaseChangePlanPolicy {
 
     @XmlElement(required = true)
     private BillingActionPolicy policy;
-
-    // Required for deserialization
-    public DefaultCaseChangePlanPolicy() {
-    }
 
     @Override
     protected BillingActionPolicy getResult() {
@@ -64,8 +54,8 @@ public class DefaultCaseChangePlanPolicy extends DefaultCaseChange<BillingAction
     }
 
     @Override
-    public void initialize(final StandaloneCatalog catalog) {
-        super.initialize(catalog);
+    public void initialize(final StandaloneCatalog catalog, final URI sourceURI) {
+        super.initialize(catalog, sourceURI);
         CatalogSafetyInitializer.initializeNonRequiredNullFieldsWithDefaultValue(this);
     }
 
@@ -101,7 +91,7 @@ public class DefaultCaseChangePlanPolicy extends DefaultCaseChange<BillingAction
     public String toString() {
         return "DefaultCaseChangePlanPolicy {" +
                "policy=" + policy +
-               ", phaseType=" + getPhaseType() +
+               ", phaseType=" + phaseType +
                ", fromProduct=" + getFromProduct() +
                ", fromProductCategory=" + getFromProductCategory() +
                ", fromBillingPeriod=" + getFromBillingPeriod() +
@@ -111,20 +101,5 @@ public class DefaultCaseChangePlanPolicy extends DefaultCaseChange<BillingAction
                ", toBillingPeriod=" + getToBillingPeriod() +
                ", toPriceList=" + getToPriceList() +
                '}';
-    }
-
-    @Override
-    public void writeExternal(final ObjectOutput out) throws IOException {
-        super.writeExternal(out);
-        out.writeBoolean(policy != null);
-        if (policy != null) {
-            out.writeUTF(policy.name());
-        }
-    }
-
-    @Override
-    public void readExternal(final ObjectInput in) throws IOException, ClassNotFoundException {
-        super.readExternal(in);
-        this.policy = in.readBoolean() ? BillingActionPolicy.valueOf(in.readUTF()) : null;
     }
 }

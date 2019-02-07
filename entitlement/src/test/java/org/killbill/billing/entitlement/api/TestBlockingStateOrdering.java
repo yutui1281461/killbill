@@ -26,7 +26,6 @@ import org.joda.time.DateTime;
 import org.killbill.billing.entitlement.DefaultEntitlementService;
 import org.killbill.billing.entitlement.EntitlementTestSuiteNoDB;
 import org.killbill.billing.junction.DefaultBlockingState;
-import org.killbill.billing.platform.api.KillbillService.KILLBILL_SERVICES;
 import org.killbill.billing.subscription.api.user.SubscriptionBaseTransition;
 import org.mockito.Mockito;
 import org.testng.Assert;
@@ -43,8 +42,8 @@ public class TestBlockingStateOrdering extends EntitlementTestSuiteNoDB {
         final UUID subscriptionId1 = UUID.randomUUID();
 
         final Collection<BlockingState> blockingStates = new LinkedList<BlockingState>();
-        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName(), false, false, now));
-        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, "stuff", KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName(), false, false, now.plusDays(1)));
+        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME, false, false, now));
+        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, "stuff", DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME, false, false, now.plusDays(1)));
 
         final LinkedList<SubscriptionEvent> allEvents = new LinkedList<SubscriptionEvent>();
         allEvents.add(createEvent(subscriptionId1, SubscriptionEventType.START_BILLING, now));
@@ -64,7 +63,7 @@ public class TestBlockingStateOrdering extends EntitlementTestSuiteNoDB {
         final UUID subscriptionId1 = UUID.randomUUID();
 
         final Collection<BlockingState> blockingStates = new LinkedList<BlockingState>();
-        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName(), false, false, now));
+        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME, false, false, now));
         blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, "svc1", false, false, now.plusDays(1)));
         blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_CANCELLED, "svc1", false, false, now.plusDays(2)));
 
@@ -88,7 +87,7 @@ public class TestBlockingStateOrdering extends EntitlementTestSuiteNoDB {
         final UUID subscriptionId1 = UUID.randomUUID();
 
         final Collection<BlockingState> blockingStates = new LinkedList<BlockingState>();
-        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName(), false, false, now));
+        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME, false, false, now));
         blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, "stuff", "svc1", true, true, now));
 
         final LinkedList<SubscriptionEvent> allEvents = new LinkedList<SubscriptionEvent>();
@@ -133,7 +132,7 @@ public class TestBlockingStateOrdering extends EntitlementTestSuiteNoDB {
         final UUID subscriptionId1 = UUID.randomUUID();
 
         final Collection<BlockingState> blockingStates = new LinkedList<BlockingState>();
-        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName(), false, false, now));
+        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME, false, false, now));
         blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, "stuff", "svc1", true, true, now.plusDays(40)));
 
         final LinkedList<SubscriptionEvent> allEvents = new LinkedList<SubscriptionEvent>();
@@ -156,7 +155,7 @@ public class TestBlockingStateOrdering extends EntitlementTestSuiteNoDB {
         final UUID subscriptionId1 = UUID.randomUUID();
 
         final Collection<BlockingState> blockingStates = new LinkedList<BlockingState>();
-        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName(), false, false, now));
+        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME, false, false, now));
         blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, "stuff", "svc1", true, true, now.plusDays(30)));
 
         final LinkedList<SubscriptionEvent> allEvents = new LinkedList<SubscriptionEvent>();
@@ -179,7 +178,7 @@ public class TestBlockingStateOrdering extends EntitlementTestSuiteNoDB {
         final UUID subscriptionId1 = UUID.randomUUID();
 
         final Collection<BlockingState> blockingStates = new LinkedList<BlockingState>();
-        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName(), false, false, now));
+        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME, false, false, now));
         blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, "stuff", "svc1", true, true, now.plusDays(30)));
         blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, "stuff", "svc1", false, false, now.plusDays(30)));
 
@@ -205,7 +204,7 @@ public class TestBlockingStateOrdering extends EntitlementTestSuiteNoDB {
         final UUID subscriptionId1 = UUID.randomUUID();
 
         final Collection<BlockingState> blockingStates = new LinkedList<BlockingState>();
-        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName(), false, false, now));
+        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME, false, false, now));
         blockingStates.add(createBlockingState(UUID.randomUUID(), BlockingStateType.ACCOUNT, "stuff", "svc1", true, true, now.plusDays(30)));
 
         final LinkedList<SubscriptionEvent> allEvents = new LinkedList<SubscriptionEvent>();
@@ -228,7 +227,7 @@ public class TestBlockingStateOrdering extends EntitlementTestSuiteNoDB {
         final UUID subscriptionId1 = UUID.randomUUID();
 
         final Collection<BlockingState> blockingStates = new LinkedList<BlockingState>();
-        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName(), false, false, now));
+        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME, false, false, now));
         blockingStates.add(createBlockingState(UUID.randomUUID(), BlockingStateType.ACCOUNT, "stuff", "svc1", false, true, now.plusDays(10)));
         // Same service
         blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, "stuff", "svc1", true, false, now.plusDays(15)));
@@ -258,7 +257,7 @@ public class TestBlockingStateOrdering extends EntitlementTestSuiteNoDB {
         final UUID subscriptionId1 = UUID.randomUUID();
 
         final Collection<BlockingState> blockingStates = new LinkedList<BlockingState>();
-        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName(), false, false, now));
+        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME, false, false, now));
         blockingStates.add(createBlockingState(UUID.randomUUID(), BlockingStateType.ACCOUNT, "stuff", "svc1", false, true, now.plusDays(10)));
         // Different service
         blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, "stuff", "svc2", true, false, now.plusDays(15)));
@@ -305,8 +304,8 @@ public class TestBlockingStateOrdering extends EntitlementTestSuiteNoDB {
         final DateTime now = clock.getUTCNow();
 
         final Collection<BlockingState> blockingStates = new LinkedList<BlockingState>();
-        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName(), false, false, now));
-        blockingStates.add(createBlockingState(subscriptionId2, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, KILLBILL_SERVICES.ENTITLEMENT_SERVICE.getServiceName(), false, false, now));
+        blockingStates.add(createBlockingState(subscriptionId1, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME, false, false, now));
+        blockingStates.add(createBlockingState(subscriptionId2, BlockingStateType.SUBSCRIPTION, DefaultEntitlementApi.ENT_STATE_START, DefaultEntitlementService.ENTITLEMENT_SERVICE_NAME, false, false, now));
         blockingStates.add(createBlockingState(UUID.randomUUID(), BlockingStateType.ACCOUNT, "stuff", "svc1", true, true, now.plusDays(30)));
 
         final LinkedList<SubscriptionEvent> allEvents = new LinkedList<SubscriptionEvent>();

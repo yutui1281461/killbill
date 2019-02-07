@@ -1,7 +1,7 @@
 /*
  * Copyright 2010-2014 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2016 Groupon, Inc
+ * Copyright 2014-2016 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -42,11 +42,12 @@ public abstract class InvoiceItemBase extends EntityBase implements InvoiceItem 
     protected final BigDecimal amount;
     protected final Currency currency;
     protected final String description;
-    protected final InvoiceItemType invoiceItemType;
 
     /* Fixed and recurring specific */
     protected final UUID subscriptionId;
     protected final UUID bundleId;
+    protected final String planName;
+    protected final String phaseName;
 
     /* Recurring specific */
     protected final BigDecimal rate;
@@ -54,33 +55,59 @@ public abstract class InvoiceItemBase extends EntityBase implements InvoiceItem 
     /* RepairAdjInvoiceItem */
     protected final UUID linkedItemId;
 
-    /* Usage details */
-    protected final Integer quantity;
-    protected final String itemDetails;
+    /* Usage specific */
+    protected final String usageName;
 
-    public InvoiceItemBase(final UUID id, @Nullable final DateTime createdDate, final UUID invoiceId, final UUID accountId, @Nullable final UUID bundleId,
-                           @Nullable final UUID subscriptionId, @Nullable final String description,
-                           final LocalDate startDate, final LocalDate endDate, final BigDecimal amount, final BigDecimal rate, final Currency currency, final UUID reversedItemId, final InvoiceItemType invoiceItemType) {
-        this(id, createdDate, invoiceId, accountId, null, bundleId, subscriptionId, description, startDate, endDate, amount, rate, currency, reversedItemId, null, null, invoiceItemType);
+    @Override
+    public String toString() {
+        // Note: we don't use all fields here, as the output would be overwhelming
+        // (we output all invoice items as they are generated).
+        final StringBuilder sb = new StringBuilder();
+        sb.append(getInvoiceItemType());
+        sb.append("{startDate=").append(startDate);
+        sb.append(", endDate=").append(endDate);
+        sb.append(", amount=").append(amount);
+        sb.append(", rate=").append(rate);
+        sb.append(", subscriptionId=").append(subscriptionId);
+        sb.append(", linkedItemId=").append(linkedItemId);
+        sb.append('}');
+        return sb.toString();
     }
 
+    /*
+    * CTORs with ID; called from DAO when rehydrating
+    */
+    // No rate and no reversing item
     public InvoiceItemBase(final UUID id, @Nullable final DateTime createdDate, final UUID invoiceId, final UUID accountId, @Nullable final UUID bundleId,
-                           @Nullable final UUID subscriptionId, @Nullable final String description,
-                           final LocalDate startDate, final LocalDate endDate, final BigDecimal amount, final BigDecimal rate, final Currency currency, final UUID reversedItemId,
-                           @Nullable final Integer quantity, @Nullable final String itemDetails, final InvoiceItemType invoiceItemType) {
-        this(id, createdDate, invoiceId, accountId, null, bundleId, subscriptionId, description, startDate, endDate, amount, rate, currency, reversedItemId, quantity, itemDetails, invoiceItemType);
+                           @Nullable final UUID subscriptionId, @Nullable final String description, @Nullable final String planName, @Nullable final String phaseName, @Nullable final String usageName,
+                           final LocalDate startDate, final LocalDate endDate, final BigDecimal amount, final Currency currency) {
+        this(id, createdDate, invoiceId, accountId, null, bundleId, subscriptionId, description, planName, phaseName, usageName, startDate, endDate, amount, null, currency, null);
+    }
+
+    // With rate but no reversing item
+    public InvoiceItemBase(final UUID id, @Nullable final DateTime createdDate, final UUID invoiceId, final UUID accountId, @Nullable final UUID bundleId,
+                           @Nullable final UUID subscriptionId, @Nullable final String description, @Nullable final String planName, @Nullable final String phaseName, @Nullable final String usageName,
+                           final LocalDate startDate, final LocalDate endDate, final BigDecimal amount, final BigDecimal rate, final Currency currency) {
+        this(id, createdDate, invoiceId, accountId, null, bundleId, subscriptionId, description, planName, phaseName, usageName, startDate, endDate, amount, rate, currency, null);
+    }
+
+    // With  reversing item, no rate
+    public InvoiceItemBase(final UUID id, @Nullable final DateTime createdDate, final UUID invoiceId, final UUID accountId, @Nullable final UUID bundleId,
+                           @Nullable final UUID subscriptionId, @Nullable final String description, @Nullable final String planName, @Nullable final String phaseName, @Nullable final String usageName,
+                           final LocalDate startDate, final LocalDate endDate, final BigDecimal amount, final Currency currency, final UUID reversedItemId) {
+        this(id, createdDate, invoiceId, accountId, null, bundleId, subscriptionId, description, planName, phaseName, usageName, startDate, endDate, amount, null, currency, reversedItemId);
     }
 
     // For parent invoices
     public InvoiceItemBase(final UUID id, @Nullable final DateTime createdDate, final UUID invoiceId, final UUID accountId, final UUID childAccountId,
-                           final BigDecimal amount, final Currency currency, final String description, final InvoiceItemType invoiceItemType) {
-        this(id, createdDate, invoiceId, accountId, childAccountId, null, null, description, null, null, amount, null, currency, null, null, null, invoiceItemType);
+                             final BigDecimal amount, final Currency currency, final String description) {
+        this(id, createdDate, invoiceId, accountId, childAccountId, null, null, description, null, null, null, null, null, amount, null, currency, null);
     }
 
     private InvoiceItemBase(final UUID id, @Nullable final DateTime createdDate, final UUID invoiceId, final UUID accountId, @Nullable final UUID childAccountId, @Nullable final UUID bundleId,
-                            @Nullable final UUID subscriptionId, @Nullable final String description,
+                            @Nullable final UUID subscriptionId, @Nullable final String description, @Nullable final String planName, @Nullable final String phaseName, @Nullable final String usageName,
                             @Nullable final LocalDate startDate, final LocalDate endDate, final BigDecimal amount, final BigDecimal rate, final Currency currency,
-                            final UUID reversedItemId, @Nullable final Integer quantity, @Nullable final String itemDetails, final InvoiceItemType invoiceItemType) {
+                            final UUID reversedItemId) {
         super(id, createdDate, createdDate);
         this.invoiceId = invoiceId;
         this.accountId = accountId;
@@ -88,15 +115,15 @@ public abstract class InvoiceItemBase extends EntityBase implements InvoiceItem 
         this.subscriptionId = subscriptionId;
         this.bundleId = bundleId;
         this.description = description;
+        this.planName = planName;
+        this.phaseName = phaseName;
+        this.usageName = usageName;
         this.startDate = startDate;
         this.endDate = endDate;
         this.amount = amount == null || currency == null ? amount : KillBillMoney.of(amount, currency);
         this.currency = currency;
         this.rate = rate;
         this.linkedItemId = reversedItemId;
-        this.quantity = quantity;
-        this.itemDetails = itemDetails;
-        this.invoiceItemType = invoiceItemType;
     }
 
     @Override
@@ -117,6 +144,16 @@ public abstract class InvoiceItemBase extends EntityBase implements InvoiceItem 
     @Override
     public UUID getSubscriptionId() {
         return subscriptionId;
+    }
+
+    @Override
+    public String getPlanName() {
+        return planName;
+    }
+
+    @Override
+    public String getPhaseName() {
+        return phaseName;
     }
 
     @Override
@@ -150,58 +187,13 @@ public abstract class InvoiceItemBase extends EntityBase implements InvoiceItem 
     }
 
     @Override
+    public String getUsageName() {
+        return usageName;
+    }
+
+    @Override
     public UUID getChildAccountId() {
         return childAccountId;
-    }
-
-    @Override
-    public String getProductName() {
-        return null;
-    }
-
-    @Override
-    public String getPrettyProductName() {
-        return null;
-    }
-
-    @Override
-    public String getPlanName() {
-        return null;
-    }
-
-    @Override
-    public String getPrettyPlanName() {
-        return null;
-    }
-
-    @Override
-    public String getPhaseName() {
-        return null;
-    }
-
-    @Override
-    public String getPrettyPhaseName() {
-        return null;
-    }
-
-    @Override
-    public String getUsageName() {
-        return null;
-    }
-
-    @Override
-    public String getPrettyUsageName() {
-        return null;
-    }
-
-    @Override
-    public Integer getQuantity() {
-        return quantity;
-    }
-
-    @Override
-    public String getItemDetails() {
-        return itemDetails;
     }
 
     @Override
@@ -267,6 +259,12 @@ public abstract class InvoiceItemBase extends EntityBase implements InvoiceItem 
         if (currency != that.currency) {
             return false;
         }
+        if (phaseName != null ? !phaseName.equals(that.phaseName) : that.phaseName != null) {
+            return false;
+        }
+        if (planName != null ? !planName.equals(that.planName) : that.planName != null) {
+            return false;
+        }
         return true;
     }
 
@@ -283,47 +281,16 @@ public abstract class InvoiceItemBase extends EntityBase implements InvoiceItem 
         result = 31 * result + (subscriptionId != null ? subscriptionId.hashCode() : 0);
         result = 31 * result + (bundleId != null ? bundleId.hashCode() : 0);
         result = 31 * result + (description != null ? description.hashCode() : 0);
+        result = 31 * result + (planName != null ? planName.hashCode() : 0);
+        result = 31 * result + (phaseName != null ? phaseName.hashCode() : 0);
         result = 31 * result + (rate != null ? rate.hashCode() : 0);
         result = 31 * result + (linkedItemId != null ? linkedItemId.hashCode() : 0);
         return result;
     }
 
     @Override
-    public String toString() {
-        // Note: we don't use all fields here, as the output would be overwhelming
-        // (we output all invoice items as they are generated).
-        final StringBuilder sb = new StringBuilder();
-        sb.append(getInvoiceItemType());
-        sb.append("{");
-        if (startDate != null) {
-            sb.append("startDate=").append(startDate);
-        }
-        if (endDate != null) {
-            sb.append("endDate=").append(endDate);
-        }
-        if (amount != null) {
-            sb.append("amount=").append(amount);
-        }
-        if (rate != null) {
-            sb.append("rate=").append(rate);
-        }
-        if (subscriptionId != null) {
-            sb.append("subscriptionId=").append(subscriptionId);
-        }
-        if (linkedItemId != null) {
-            sb.append("linkedItemId=").append(linkedItemId);
-        }
-        sb.append('}');
-        return sb.toString();
-    }
+    public abstract InvoiceItemType getInvoiceItemType();
 
     @Override
-    public InvoiceItemType getInvoiceItemType() {
-        return invoiceItemType;
-    }
-
-    @Override
-    public String getDescription() {
-        return description;
-    }
+    public abstract String getDescription();
 }

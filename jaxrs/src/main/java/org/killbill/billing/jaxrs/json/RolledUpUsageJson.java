@@ -17,7 +17,6 @@
 package org.killbill.billing.jaxrs.json;
 
 import java.util.List;
-import java.util.UUID;
 
 import org.joda.time.LocalDate;
 import org.killbill.billing.usage.api.RolledUpUnit;
@@ -28,19 +27,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-@ApiModel(value="RolledUpUsage")
 public class RolledUpUsageJson {
 
-    private final UUID subscriptionId;
+    @ApiModelProperty(dataType = "java.util.UUID")
+    private final String subscriptionId;
     private final LocalDate startDate;
     private final LocalDate endDate;
     private final List<RolledUpUnitJson> rolledUpUnits;
 
     @JsonCreator
-    public RolledUpUsageJson(@JsonProperty("subscriptionId") final UUID subscriptionId,
+    public RolledUpUsageJson(@JsonProperty("subscriptionId") final String subscriptionId,
                              @JsonProperty("startDate") final LocalDate startDate,
                              @JsonProperty("endDate") final LocalDate endDate,
                              @JsonProperty("rolledUpUnits") final List<RolledUpUnitJson> rolledUpUnits) {
@@ -51,7 +49,7 @@ public class RolledUpUsageJson {
     }
 
     public RolledUpUsageJson(final RolledUpUsage input) {
-        this(input.getSubscriptionId(), input.getStart(), input.getEnd(), ImmutableList.copyOf(Iterables.transform(input.getRolledUpUnits(), new Function<RolledUpUnit, RolledUpUnitJson>() {
+        this(input.getSubscriptionId().toString(), input.getStart(), input.getEnd(), ImmutableList.copyOf(Iterables.transform(input.getRolledUpUnits(), new Function<RolledUpUnit, RolledUpUnitJson>() {
             @Override
             public RolledUpUnitJson apply(final RolledUpUnit input) {
                 return new RolledUpUnitJson(input);
@@ -59,7 +57,7 @@ public class RolledUpUsageJson {
         })));
     }
 
-    public UUID getSubscriptionId() {
+    public String getSubscriptionId() {
         return subscriptionId;
     }
 
@@ -75,7 +73,6 @@ public class RolledUpUsageJson {
         return rolledUpUnits;
     }
 
-    @ApiModel(value="RolledUpUnit")
     public static class RolledUpUnitJson {
 
         private final String unitType;

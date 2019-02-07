@@ -1,6 +1,6 @@
 /*
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
+ * Copyright 2014-2017 Groupon, Inc
+ * Copyright 2014-2017 The Billing Project, LLC
  *
  * The Billing Project licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
@@ -175,8 +175,7 @@ public class IncompletePaymentTransactionTask extends CompletionTaskBase<Payment
         final Boolean result = doJanitorOperationWithAccountLock(new JanitorIterationCallback() {
             @Override
             public Boolean doIteration() {
-                final PaymentTransactionModelDao refreshedPaymentTransaction = paymentDao.getPaymentTransaction(paymentTransaction.getId(), internalTenantContext);
-                return updatePaymentAndTransactionInternal(payment, null, null, refreshedPaymentTransaction, paymentTransactionInfoPlugin, internalTenantContext);
+                return updatePaymentAndTransactionInternal(payment, null, null, paymentTransaction, paymentTransactionInfoPlugin, internalTenantContext);
             }
         }, internalTenantContext);
         return result != null && result;
@@ -212,20 +211,25 @@ public class IncompletePaymentTransactionTask extends CompletionTaskBase<Payment
                 break;
             case UNKNOWN:
             default:
+                if (transactionStatus != paymentTransaction.getTransactionStatus()) {
+                    log.info("Unable to repair paymentId='{}', paymentTransactionId='{}', currentTransactionStatus='{}', newTransactionStatus='{}'",
+                             payment.getId(), paymentTransaction.getId(), paymentTransaction.getTransactionStatus(), transactionStatus);
+                }
                 // We can't get anything interesting from the plugin...
-                log.info("Unable to repair paymentId='{}', paymentTransactionId='{}', currentTransactionStatus='{}', newTransactionStatus='{}'",
-                         payment.getId(), paymentTransaction.getId(), paymentTransaction.getTransactionStatus(), transactionStatus);
                 insertNewNotificationForUnresolvedTransactionIfNeeded(paymentTransaction.getId(), transactionStatus, attemptNumber, userToken, internalTenantContext.getAccountRecordId(), internalTenantContext.getTenantRecordId());
                 return false;
         }
 
         // Our status did not change, so we just insert a new notification (attemptNumber will be incremented)
         if (transactionStatus == paymentTransaction.getTransactionStatus()) {
-            log.info("Unable to repair paymentId='{}', paymentTransactionId='{}', currentTransactionStatus='{}', newTransactionStatus='{}'",
-                     payment.getId(), paymentTransaction.getId(), paymentTransaction.getTransactionStatus(), transactionStatus);
+            log.debug("Janitor IncompletePaymentTransactionTask repairing payment {}, transaction {}, transitioning transactionStatus from {} -> {}",
+                      payment.getId(), paymentTransaction.getId(), paymentTransaction.getTransactionStatus(), transactionStatus);
             insertNewNotificationForUnresolvedTransactionIfNeeded(paymentTransaction.getId(), transactionStatus, attemptNumber, userToken, internalTenantContext.getAccountRecordId(), internalTenantContext.getTenantRecordId());
             return false;
         }
+
+        // Recompute new lastSuccessPaymentState. This is important to be able to allow new operations on the state machine (for e.g an AUTH_SUCCESS would now allow a CAPTURE operation)
+        final String lastSuccessPaymentState = paymentStateMachineHelper.isSuccessState(newPaymentState) ? newPaymentState : null;
 
         // Update processedAmount and processedCurrency
         final BigDecimal processedAmount;
@@ -253,18 +257,11 @@ public class IncompletePaymentTransactionTask extends CompletionTaskBase<Payment
                  payment.getId(), paymentTransaction.getId(), paymentTransaction.getTransactionStatus(), transactionStatus);
 
         final InternalCallContext internalCallContext = internalCallContextFactory.createInternalCallContext(payment.getAccountId(), callContext);
-
-        // Recompute new lastSuccessPaymentState. This is important to be able to allow new operations on the state machine (for e.g an AUTH_SUCCESS would now allow a CAPTURE operation)
-        if (paymentStateMachineHelper.isSuccessState(newPaymentState)) {
-            final String lastSuccessPaymentState = newPaymentState;
-            paymentDao.updatePaymentAndTransactionOnCompletion(payment.getAccountId(), paymentTransaction.getAttemptId(), payment.getId(), paymentTransaction.getTransactionType(), newPaymentState, lastSuccessPaymentState,
-                                                               paymentTransaction.getId(), transactionStatus, processedAmount, processedCurrency, gatewayErrorCode, gatewayError, internalCallContext);
-        } else {
-            paymentDao.updatePaymentAndTransactionOnCompletion(payment.getAccountId(), paymentTransaction.getAttemptId(), payment.getId(), paymentTransaction.getTransactionType(), newPaymentState,
-                                                               paymentTransaction.getId(), transactionStatus, processedAmount, processedCurrency, gatewayErrorCode, gatewayError, internalCallContext);
-        }
+        paymentDao.updatePaymentAndTransactionOnCompletion(payment.getAccountId(), paymentTransaction.getAttemptId(), payment.getId(), paymentTransaction.getTransactionType(), newPaymentState, lastSuccessPaymentState,
+                                                           paymentTransaction.getId(), transactionStatus, processedAmount, processedCurrency, gatewayErrorCode, gatewayError, internalCallContext);
 
         return true;
+
     }
 
     // Keep the existing currentTransactionStatus if we can't obtain a better answer from the plugin; if not, return the newTransactionStatus
@@ -274,13 +271,13 @@ public class IncompletePaymentTransactionTask extends CompletionTaskBase<Payment
     }
 
     @VisibleForTesting
-    DateTime getNextNotificationTime(final TransactionStatus transactionStatus, final Integer attemptNumber, final InternalTenantContext internalTenantContext) {
+    DateTime getNextNotificationTime(final TransactionStatus transactionStatus, final Integer attemptNumber, final InternalTenantContext tenantContext) {
 
         final List<TimeSpan> retries;
         if (TransactionStatus.UNKNOWN.equals(transactionStatus)) {
-            retries = paymentConfig.getUnknownTransactionsRetries(internalTenantContext);
+            retries = paymentConfig.getUnknownTransactionsRetries(tenantContext);
         } else if (TransactionStatus.PENDING.equals(transactionStatus)) {
-            retries = paymentConfig.getPendingTransactionsRetries(internalTenantContext);
+            retries = paymentConfig.getPendingTransactionsRetries(tenantContext);
         } else {
             retries = ImmutableList.of();
             log.warn("Unexpected transactionStatus='{}' from janitor, ignore...", transactionStatus);

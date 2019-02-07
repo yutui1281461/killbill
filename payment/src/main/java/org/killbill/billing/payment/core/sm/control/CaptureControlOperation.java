@@ -43,7 +43,6 @@ public class CaptureControlOperation extends OperationControlCallback {
                                               paymentStateControlContext.getPaymentId(),
                                               paymentStateControlContext.getAmount(),
                                               paymentStateControlContext.getCurrency(),
-                                              paymentStateControlContext.getEffectiveDate(),
                                               paymentStateControlContext.getPaymentTransactionExternalKey(),
                                               paymentStateControlContext.getPaymentTransactionIdForNewPaymentTransaction(),
                                               false,

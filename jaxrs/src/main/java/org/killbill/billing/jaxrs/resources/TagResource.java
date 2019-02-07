@@ -1,9 +1,7 @@
 /*
  * Copyright 2010-2014 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
  *
- * The Billing Project licenses this file to you under the Apache License, version 2.0
+ * Ning licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
  * License.  You may obtain a copy of the License at:
  *
@@ -32,16 +30,10 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
 
 import org.killbill.billing.ObjectType;
-import org.killbill.billing.account.api.AccountApiException;
 import org.killbill.billing.account.api.AccountUserApi;
-import org.killbill.billing.jaxrs.json.AuditLogJson;
-import org.killbill.billing.payment.api.InvoicePaymentApi;
 import org.killbill.billing.payment.api.PaymentApi;
-import org.killbill.billing.util.api.AuditLevel;
-import org.killbill.billing.util.audit.AuditLogWithHistory;
 import org.killbill.clock.Clock;
 import org.killbill.billing.jaxrs.json.TagJson;
 import org.killbill.billing.jaxrs.util.Context;
@@ -63,14 +55,13 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 
 @Singleton
 @Path(JaxrsResource.TAGS_PATH)
-@Api(value = JaxrsResource.TAGS_PATH, description = "Operations on tags", tags="Tag")
+@Api(value = JaxrsResource.TAGS_PATH, description = "Operations on tags")
 public class TagResource extends JaxRsResourceBase {
 
     @Inject
@@ -80,10 +71,9 @@ public class TagResource extends JaxRsResourceBase {
                        final AuditUserApi auditUserApi,
                        final AccountUserApi accountUserApi,
                        final PaymentApi paymentApi,
-                       final InvoicePaymentApi invoicePaymentApi,
                        final Clock clock,
                        final Context context) {
-        super(uriBuilder, tagUserApi, customFieldUserApi, auditUserApi, accountUserApi, paymentApi, invoicePaymentApi, null, clock, context);
+        super(uriBuilder, tagUserApi, customFieldUserApi, auditUserApi, accountUserApi, paymentApi, null, clock, context);
     }
 
     @TimedResource
@@ -96,7 +86,7 @@ public class TagResource extends JaxRsResourceBase {
                             @QueryParam(QUERY_SEARCH_LIMIT) @DefaultValue("100") final Long limit,
                             @QueryParam(QUERY_AUDIT) @DefaultValue("NONE") final AuditMode auditMode,
                             @javax.ws.rs.core.Context final HttpServletRequest request) throws TagApiException {
-        final TenantContext tenantContext = context.createTenantContextNoAccountId(request);
+        final TenantContext tenantContext = context.createContext(request);
         final Pagination<Tag> tags = tagUserApi.getTags(offset, limit, tenantContext);
         final URI nextPageUri = uriBuilder.nextPage(TagResource.class, "getTags", tags.getNextOffset(), limit, ImmutableMap.<String, String>of(QUERY_AUDIT, auditMode.getLevel().toString()));
 
@@ -130,7 +120,7 @@ public class TagResource extends JaxRsResourceBase {
                                @QueryParam(QUERY_SEARCH_LIMIT) @DefaultValue("100") final Long limit,
                                @QueryParam(QUERY_AUDIT) @DefaultValue("NONE") final AuditMode auditMode,
                                @javax.ws.rs.core.Context final HttpServletRequest request) throws TagApiException {
-        final TenantContext tenantContext = context.createTenantContextNoAccountId(request);
+        final TenantContext tenantContext = context.createContext(request);
         final Pagination<Tag> tags = tagUserApi.searchTags(searchKey, offset, limit, tenantContext);
         final URI nextPageUri = uriBuilder.nextPage(TagResource.class, "searchTags", tags.getNextOffset(), limit, ImmutableMap.<String, String>of("searchKey", searchKey,
                                                                                                                                                   QUERY_AUDIT, auditMode.getLevel().toString()));
@@ -150,18 +140,5 @@ public class TagResource extends JaxRsResourceBase {
                                                     }
                                                 },
                                                 nextPageUri);
-    }
-
-    @TimedResource
-    @GET
-    @Path("/{tagId:" + UUID_PATTERN + "}/" + AUDIT_LOG_WITH_HISTORY)
-    @Produces(APPLICATION_JSON)
-    @ApiOperation(value = "Retrieve tag audit logs with history by id", response = AuditLogJson.class, responseContainer = "List")
-    @ApiResponses(value = {@ApiResponse(code = 404, message = "Account not found")})
-    public Response getTagAuditLogsWithHistory(@PathParam("tagId") final UUID tagId,
-                                               @javax.ws.rs.core.Context final HttpServletRequest request) throws AccountApiException {
-        final TenantContext tenantContext = context.createTenantContextNoAccountId(request);
-        final List<AuditLogWithHistory> auditLogWithHistory = tagUserApi.getTagAuditLogsWithHistoryForId(tagId, AuditLevel.FULL, tenantContext);
-        return Response.status(Status.OK).entity(getAuditLogsWithHistory(auditLogWithHistory)).build();
     }
 }

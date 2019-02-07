@@ -1,9 +1,7 @@
 /*
  * Copyright 2010-2013 Ning, Inc.
- * Copyright 2014-2018 Groupon, Inc
- * Copyright 2014-2018 The Billing Project, LLC
  *
- * The Billing Project licenses this file to you under the Apache License, version 2.0
+ * Ning licenses this file to you under the Apache License, version 2.0
  * (the "License"); you may not use this file except in compliance with the
  * License.  You may obtain a copy of the License at:
  *
@@ -18,10 +16,6 @@
 
 package org.killbill.billing.catalog.rules;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.net.URI;
 
 import javax.xml.bind.annotation.XmlElement;
@@ -35,14 +29,14 @@ import org.killbill.billing.catalog.api.PlanSpecifier;
 import org.killbill.billing.catalog.api.StaticCatalog;
 import org.killbill.xmlloader.ValidationErrors;
 
-public abstract class DefaultCasePhase<T> extends DefaultCaseStandardNaming<T> implements Externalizable {
+public abstract class DefaultCasePhase<T> extends DefaultCaseStandardNaming<T> {
 
     @XmlElement(required = false)
     protected PhaseType phaseType;
 
     public T getResult(final PlanPhaseSpecifier specifier, final StaticCatalog c) throws CatalogApiException {
         if ((phaseType == null || specifier.getPhaseType() == phaseType)
-            && satisfiesCase(new PlanSpecifier(specifier), c)) {
+                && satisfiesCase(new PlanSpecifier(specifier), c)) {
             return getResult();
         }
         return null;
@@ -67,10 +61,11 @@ public abstract class DefaultCasePhase<T> extends DefaultCaseStandardNaming<T> i
     }
 
     @Override
-    public void initialize(final StandaloneCatalog catalog) {
-        super.initialize(catalog);
+    public void initialize(final StandaloneCatalog catalog, final URI sourceURI) {
+        super.initialize(catalog, sourceURI);
         CatalogSafetyInitializer.initializeNonRequiredNullFieldsWithDefaultValue(this);
     }
+
 
     public DefaultCasePhase<T> setPhaseType(final PhaseType phaseType) {
         this.phaseType = phaseType;
@@ -103,20 +98,5 @@ public abstract class DefaultCasePhase<T> extends DefaultCaseStandardNaming<T> i
         int result = super.hashCode();
         result = 31 * result + (phaseType != null ? phaseType.hashCode() : 0);
         return result;
-    }
-
-    @Override
-    public void writeExternal(final ObjectOutput out) throws IOException {
-        super.writeExternal(out);
-        out.writeBoolean(phaseType != null);
-        if (phaseType != null) {
-            out.writeUTF(phaseType.name());
-        }
-    }
-
-    @Override
-    public void readExternal(final ObjectInput in) throws IOException, ClassNotFoundException {
-        super.readExternal(in);
-        this.phaseType = in.readBoolean() ? PhaseType.valueOf(in.readUTF()) : null;
     }
 }
